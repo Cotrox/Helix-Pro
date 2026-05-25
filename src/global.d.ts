@@ -1,0 +1,14 @@
+export {};
+
+type DesktopCollectionName = 'shooters' | 'sessions' | 'tournaments';
+
+interface DesktopAPI {
+  readCollection: (collectionName: DesktopCollectionName) => Promise<any[]>;
+  writeCollection: (collectionName: DesktopCollectionName, items: any[]) => Promise<{ success: true }>;
+}
+
+declare global {
+  interface Window {
+    desktopAPI?: DesktopAPI;
+  }
+}
