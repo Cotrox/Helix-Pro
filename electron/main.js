@@ -22,6 +22,7 @@ const createMainWindow = async () => {
     height: 960,
     minWidth: 1280,
     minHeight: 800,
+    resizable: true,
     title: projectName,
     backgroundColor: '#0F172A',
     icon: path.join(__dirname, '..', 'build', 'icon.png'),

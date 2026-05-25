@@ -70,6 +70,15 @@
         "portable"
       ]
     },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Helix Pro",
+      "license": "build/info.txt",
+      "runAfterFinish": true
+    },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
     }
