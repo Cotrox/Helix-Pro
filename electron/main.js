@@ -24,6 +24,7 @@ const createMainWindow = async () => {
     minHeight: 800,
     title: projectName,
     backgroundColor: '#0F172A',
+    icon: path.join(__dirname, '..', 'build', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
