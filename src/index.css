@@ -36,6 +36,49 @@ html.light {
   --color-slate-950: #F8FAFC;
 }
 
+/* Escaped selectors for hardcoded background classes in light mode */
+html.light .bg-\[\#0F172A\] {
+  background-color: var(--brand-bg) !important;
+}
+html.light .bg-\[\#1E293B\] {
+  background-color: var(--card-bg) !important;
+}
+html.light .bg-\[\#2D3A4F\] {
+  background-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+html.light .bg-\[\#1a2333\] {
+  background-color: #F1F5F9 !important;
+  color: #0F172A !important;
+}
+html.light .bg-slate-950 {
+  background-color: #F8FAFC !important;
+}
+
+/* Ensure text-white is visible as dark color on light bg, except inside buttons/badges */
+html.light .text-white:not(
+  button *, 
+  button, 
+  a *, 
+  a, 
+  .bg-sky-600 *, 
+  .bg-emerald-600 *, 
+  .bg-amber-600 *, 
+  .bg-red-600 *, 
+  .bg-sky-500 *, 
+  .bg-emerald-500 *, 
+  .bg-amber-500 *, 
+  .bg-red-500 *,
+  .bg-gradient-to-r *, 
+  .bg-gradient-to-br *, 
+  .bg-gradient-to-tr *, 
+  .bg-accent-sky *,
+  .active *
+) {
+  color: #0F172A !important;
+}
+
+
 @layer base {
   body {
     @apply bg-brand-bg text-slate-200 antialiased;

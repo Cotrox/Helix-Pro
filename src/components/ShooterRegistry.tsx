@@ -1,19 +1,110 @@
-import { Trash2, Edit2, Download, UserPlus, Users, FileUp, Search, X } from 'lucide-react';
-import { Shooter, CATEGORIES, ShooterCategory } from '../types';
+import { Trash2, Edit2, Download, UserPlus, Users, FileUp, Search, X, BarChart2, TrendingUp, Trophy, Target, Percent, Calendar, AlertCircle } from 'lucide-react';
+import { Shooter, CATEGORIES, ShooterCategory, Session, Tournament } from '../types';
 import { useState, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 
 interface Props {
   shooters: Shooter[];
   onUpdate: (shooters: Shooter[]) => void;
+  sessions?: Session[];
+  tournaments?: Tournament[];
 }
 
-export default function ShooterRegistry({ shooters, onUpdate }: Props) {
+export default function ShooterRegistry({ shooters, onUpdate, sessions = [], tournaments = [] }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState<Partial<Shooter>>({ category: 'Men' });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeStatsShooterId, setActiveStatsShooterId] = useState<string | null>(null);
+
+  const statsData = useMemo(() => {
+    if (!activeStatsShooterId) return null;
+    
+    const shooter = shooters.find(s => s.id === activeStatsShooterId);
+    if (!shooter) return null;
+
+    // 1. Gather all registrations and scores for this shooter
+    const participations = sessions
+      .map(s => {
+        const reg = s.registrations.find(r => r.shooterId === activeStatsShooterId);
+        const score = s.scores.find(sc => sc.shooterId === activeStatsShooterId);
+        return { session: s, registration: reg, score };
+      })
+      .filter(p => p.registration !== undefined); // only where registered
+
+    const totalRaces = participations.length;
+    
+    // 2. Count tournament participations
+    const registeredSessionIds = new Set(participations.map(p => p.session.id));
+    const tournamentIds = new Set(
+      sessions
+        .filter(s => s.settings.tournamentId && registeredSessionIds.has(s.id) && tournaments.some(t => t.id === s.settings.tournamentId))
+        .map(s => s.settings.tournamentId)
+    );
+    const totalTournaments = tournamentIds.size;
+
+    // 3. Count hits (centri), shots (lanciati), and errors (padelle)
+    let totalHits = 0;
+    let totalShots = 0;
+    let maxScore = 0;
+    
+    const raceHistory = participations.map(({ session, score }) => {
+      const hits = score
+        ? (score.manualTotal !== null
+            ? score.manualTotal
+            : score.seriesScores.reduce((acc: number, val: number | null) => acc + (val || 0), 0))
+        : 0;
+
+      totalHits += hits;
+      const targets = session.settings.totalTargets || 0;
+      totalShots += targets;
+      
+      if (hits > maxScore) {
+        maxScore = hits;
+      }
+
+      return {
+        id: session.id,
+        name: session.settings.name,
+        date: session.settings.startDate || session.settings.date,
+        hits,
+        total: targets,
+        accuracy: targets > 0 ? ((hits / targets) * 100).toFixed(1) : '0'
+      };
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const totalErrors = totalShots - totalHits;
+    const accuracy = totalShots > 0 ? ((totalHits / totalShots) * 100).toFixed(1) : '0';
+    
+    // 4. Series statistics
+    let totalSeries = 0;
+    let totalSeriesHits = 0;
+    participations.forEach(({ score }) => {
+      if (score) {
+        score.seriesScores.forEach(val => {
+          if (val !== null) {
+            totalSeries += 1;
+            totalSeriesHits += val;
+          }
+        });
+      }
+    });
+    const avgHitsPerSeries = totalSeries > 0 ? (totalSeriesHits / totalSeries).toFixed(1) : '0';
+
+    return {
+      shooter,
+      totalRaces,
+      totalTournaments,
+      totalHits,
+      totalShots,
+      totalErrors,
+      accuracy,
+      maxScore,
+      avgHitsPerSeries,
+      raceHistory
+    };
+  }, [activeStatsShooterId, shooters, sessions]);
 
   // 1. Alphabetical sorting and filtering
   const filteredAndSortedShooters = useMemo(() => {
@@ -290,6 +381,233 @@ export default function ShooterRegistry({ shooters, onUpdate }: Props) {
         </div>
       )}
 
+      {/* 3.5 Modal for Statistics */}
+      {activeStatsShooterId && statsData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto high-density-scroll animate-in zoom-in-95 duration-200">
+            <div className="p-6 sm:p-8 space-y-6">
+              {/* Header */}
+              <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl">
+                    <BarChart2 size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white">
+                      Statistiche Atleta
+                    </h3>
+                    <p className="text-[10px] text-slate-500 uppercase font-black">
+                      {statsData.shooter.lastName} {statsData.shooter.firstName} • Categoria: {statsData.shooter.category}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setActiveStatsShooterId(null)}
+                  className="p-2 text-slate-500 hover:text-white transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {statsData.totalRaces === 0 ? (
+                /* Empty state */
+                <div className="py-16 flex flex-col items-center justify-center text-center space-y-4">
+                  <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 text-slate-600">
+                    <AlertCircle size={32} />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">Nessun dato registrato</h4>
+                    <p className="text-[10px] text-slate-600 uppercase font-bold tracking-widest max-w-xs leading-relaxed">
+                      Questo atleta non ha ancora partecipato a gare o tornei. I dati appariranno una volta completata la prima iscrizione.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* Stats present */
+                <div className="space-y-6">
+                  {/* Grid cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {/* Accuracy Card */}
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between group hover:border-amber-500/30 transition-colors">
+                      <div className="space-y-1">
+                        <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Accuratezza</p>
+                        <p className="text-xl font-black text-amber-500 font-mono italic">{statsData.accuracy}%</p>
+                      </div>
+                      <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+                        <svg className="w-12 h-12 rotate-[-90deg]">
+                          <circle cx="24" cy="24" r="18" className="stroke-slate-800" strokeWidth="3.5" fill="transparent" />
+                          <circle cx="24" cy="24" r="18" className="stroke-amber-500" strokeWidth="3.5" fill="transparent"
+                            strokeDasharray={2 * Math.PI * 18}
+                            strokeDashoffset={2 * Math.PI * 18 * (1 - parseFloat(statsData.accuracy) / 100)}
+                            strokeLinecap="round" />
+                        </svg>
+                        <Percent className="absolute text-amber-500/55" size={10} />
+                      </div>
+                    </div>
+
+                    {/* Presenze Card */}
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between hover:border-sky-500/30 transition-colors">
+                      <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Presenze</p>
+                      <div className="flex justify-between items-end mt-2">
+                        <p className="text-xl font-black text-sky-400 font-mono italic">{statsData.totalRaces}</p>
+                        <span className="text-[8px] font-black uppercase text-sky-500 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded">
+                          {statsData.totalTournaments} Tornei
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Centri/Errori Card */}
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between hover:border-emerald-500/30 transition-colors">
+                      <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Centri / Errori</p>
+                      <div className="flex justify-between items-end mt-2">
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-mono font-bold text-emerald-400">{statsData.totalHits} C</p>
+                          <p className="text-[9px] font-mono text-rose-400">{statsData.totalErrors} E</p>
+                        </div>
+                        <Target className="text-emerald-500/40" size={18} />
+                      </div>
+                    </div>
+
+                    {/* Record Personale Card */}
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between hover:border-purple-500/30 transition-colors">
+                      <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Record Gara (PR)</p>
+                      <div className="flex justify-between items-end mt-2">
+                        <p className="text-xl font-black text-purple-400 font-mono italic">{statsData.maxScore}</p>
+                        <Trophy className="text-purple-500/40" size={18} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Graph & Stats Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* SVG Trend Chart */}
+                    <div className="lg:col-span-2 bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-[9px] text-slate-500 uppercase font-black tracking-widest flex items-center gap-1.5">
+                          <TrendingUp size={12} className="text-amber-500" /> Trend Punteggi (Accuratezza %)
+                        </h4>
+                        <span className="text-[8px] font-bold text-slate-650 uppercase font-mono">
+                          Ultimi {statsData.raceHistory.length} eventi
+                        </span>
+                      </div>
+                      
+                      {statsData.raceHistory.length < 2 ? (
+                        <div className="h-[200px] flex items-center justify-center text-center">
+                          <p className="text-[9px] text-slate-600 uppercase font-bold italic">
+                            Dati insufficienti per generare il grafico. Partecipa ad almeno 2 gare.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="w-full overflow-hidden">
+                          <svg className="w-full h-[200px]" viewBox="0 0 500 200" preserveAspectRatio="none">
+                            <defs>
+                              <linearGradient id="gradient-acc" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
+                                <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.0" />
+                              </linearGradient>
+                            </defs>
+                            
+                            {/* Grid Y lines */}
+                            {[25, 50, 75, 100].map((level) => {
+                              const y = 20 + (1 - level / 100) * 140;
+                              return (
+                                <g key={level}>
+                                  <line x1="40" y1={y} x2="480" y2={y} className="stroke-slate-900" strokeWidth="1" strokeDasharray="4 4" />
+                                  <text x="30" y={y + 3} className="fill-slate-600 font-mono text-[8px] text-right">{level}%</text>
+                                </g>
+                              );
+                            })}
+
+                            {/* X labels & vertical lines */}
+                            {statsData.raceHistory.map((item, idx) => {
+                              const x = 40 + (idx / (statsData.raceHistory.length - 1)) * 440;
+                              return (
+                                <g key={item.id}>
+                                  <line x1={x} y1="20" x2={x} y2="160" className="stroke-slate-900" strokeWidth="1" strokeDasharray="2 2" />
+                                  <text x={x} y="175" className="fill-slate-600 font-mono text-[7px] text-center" textAnchor="middle">
+                                    G{idx + 1}
+                                  </text>
+                                </g>
+                              );
+                            })}
+
+                            {/* Area under the line */}
+                            <path d={`M 40 160 L ${
+                              statsData.raceHistory.map((item, idx) => {
+                                const x = 40 + (idx / (statsData.raceHistory.length - 1)) * 440;
+                                const accPercent = item.total > 0 ? (item.hits / item.total) * 105 : 0;
+                                const y = 20 + (1 - Math.min(accPercent, 100) / 100) * 140;
+                                return `${x} ${y}`;
+                              }).join(' L ')
+                            } L 480 160 Z`} fill="url(#gradient-acc)" />
+
+                            {/* Line path */}
+                            <path d={
+                              statsData.raceHistory.map((item, idx) => {
+                                const x = 40 + (idx / (statsData.raceHistory.length - 1)) * 440;
+                                const accPercent = item.total > 0 ? (item.hits / item.total) * 100 : 0;
+                                const y = 20 + (1 - accPercent / 100) * 140;
+                                return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
+                              }).join(' ')
+                            } fill="transparent" className="stroke-amber-500" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+                            {/* Bullet points */}
+                            {statsData.raceHistory.map((item, idx) => {
+                              const x = 40 + (idx / (statsData.raceHistory.length - 1)) * 440;
+                              const accPercent = item.total > 0 ? (item.hits / item.total) * 100 : 0;
+                              const y = 20 + (1 - accPercent / 100) * 140;
+                              return (
+                                <g key={`dot-${item.id}`}>
+                                  <circle cx={x} cy={y} r="5" className="fill-slate-900 stroke-amber-500" strokeWidth="2" />
+                                  <text x={x} y={y - 8} className="fill-white font-mono text-[8px] font-black text-center" textAnchor="middle">
+                                    {item.hits}/{item.total}
+                                  </text>
+                                </g>
+                              );
+                            })}
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Historical summary list */}
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4 flex flex-col max-h-[260px] overflow-hidden">
+                      <h4 className="text-[9px] text-slate-500 uppercase font-black tracking-widest flex items-center gap-1.5 shrink-0">
+                        <Calendar size={12} className="text-sky-500" /> Ultime Gare
+                      </h4>
+                      <div className="overflow-y-auto high-density-scroll flex-1 pr-1 space-y-2">
+                        {statsData.raceHistory.slice().reverse().map((item) => (
+                          <div key={item.id} className="p-2.5 bg-slate-900/60 border border-slate-800 rounded-lg flex justify-between items-center hover:border-slate-700 transition-colors">
+                            <div className="space-y-0.5 max-w-[150px]">
+                              <p className="text-[9px] font-black text-slate-300 uppercase truncate">{item.name}</p>
+                              <p className="text-[7px] text-slate-650 font-mono">{new Date(item.date).toLocaleDateString('it-IT')}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-mono font-bold text-emerald-400">{item.hits} / {item.total}</p>
+                              <p className="text-[8px] font-mono text-slate-500 uppercase font-black">{item.accuracy}%</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="flex gap-4 justify-end pt-6 border-t border-slate-800">
+                <button
+                  onClick={() => setActiveStatsShooterId(null)}
+                  className="px-8 py-3 bg-slate-800 text-slate-350 hover:text-white rounded-xl transition font-black text-[10px] uppercase tracking-widest border border-slate-700"
+                >
+                  Chiudi
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-card-bg rounded-xl border border-slate-800 shadow-2xl overflow-x-auto no-scrollbar">
         <table className="w-full text-left min-w-[700px]">
           <thead className="bg-[#2D3A4F]">
@@ -317,6 +635,14 @@ export default function ShooterRegistry({ shooters, onUpdate }: Props) {
                   {shooter.email && <div className="flex items-center gap-1 truncate max-w-[200px]"><span className="text-slate-700">E:</span> {shooter.email}</div>}
                 </td>
                 <td className="px-6 py-4 text-right space-x-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveStatsShooterId(shooter.id)}
+                    className="p-2 text-slate-500 hover:text-amber-500 hover:bg-amber-500/5 rounded-lg transition-all"
+                    title="Visualizza statistiche atleta"
+                  >
+                    <BarChart2 size={16} />
+                  </button>
                   <button
                     type="button"
                     onClick={() => { setEditingId(shooter.id); setFormData(shooter); }}

@@ -254,6 +254,43 @@ export default function App() {
     localStorage.setItem('helix_pro_system_history', JSON.stringify(systemHistory));
   }, [systemHistory]);
 
+  // Keyboard Shortcuts (F1, F2, F3)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setActiveTab('info');
+        setSelectedSessionId(null);
+        toast.info('Navigazione all\'area informazioni');
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        try {
+          const data = {
+            shooters,
+            sessions,
+            tournaments,
+            selectedSessionId
+          };
+          downloadFile(JSON.stringify(data, null, 2), `helix_pro_backup_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+          toast.success('Backup scaricato correttamente');
+        } catch (error) {
+          toast.error('Errore durante l\'export');
+        }
+      } else if (e.key === 'F3') {
+        e.preventDefault();
+        toast.info('Ricaricamento dell\'applicazione...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 800);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [shooters, sessions, tournaments, selectedSessionId]);
+
   const handleUpdateSessionById = (id: string, updates: Partial<Session>) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
   };
@@ -638,9 +675,9 @@ export default function App() {
                   </div>
                 )
               )}
-              {activeTab === 'shooters' && (
-                <ShooterRegistry shooters={shooters} onUpdate={setShooters} />
-              )}
+               {activeTab === 'shooters' && (
+                 <ShooterRegistry shooters={shooters} onUpdate={setShooters} sessions={sessions} tournaments={tournaments} />
+               )}
               {activeTab === 'tournaments' && (
                 <TournamentView
                   tournaments={tournaments}
@@ -777,7 +814,7 @@ export default function App() {
                       {/* Buy me a coffee Button */}
                       <div className="space-y-3 relative z-10">
                         <button
-                          onClick={() => api.openExternal('https://paypal.me/Cotrox')}
+                          onClick={() => api.openExternal('https://ko-fi.com/cotrox')}
                           className="w-full bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 cursor-pointer"
                         >
                           <Coffee size={18} className="animate-bounce" />
