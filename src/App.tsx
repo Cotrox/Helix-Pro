@@ -19,7 +19,15 @@ import {
   Target,
   Menu,
   X,
-  ArrowRight
+  ArrowRight,
+  Info,
+  Trophy,
+  Coffee,
+  Sun,
+  Moon,
+  Monitor,
+  BookOpen,
+  ExternalLink
 } from 'lucide-react';
 
 import { Shooter, Session, CompetitionSettings, CATEGORIES, Tournament } from './types';
@@ -94,8 +102,49 @@ export default function App() {
     return true;
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark' | 'auto'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('helix_pro_theme') as any) || 'auto';
+    }
+    return 'auto';
+  });
 
   const isInitialMount = useRef(true);
+
+  // Theme Management
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('helix_pro_theme', theme);
+    
+    const applyTheme = () => {
+      const root = document.documentElement;
+      if (theme === 'light') {
+        root.classList.add('light');
+        root.classList.remove('dark');
+      } else if (theme === 'dark') {
+        root.classList.add('dark');
+        root.classList.remove('light');
+      } else {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (systemPrefersDark) {
+          root.classList.add('dark');
+          root.classList.remove('light');
+        } else {
+          root.classList.add('light');
+          root.classList.remove('dark');
+        }
+      }
+    };
+
+    applyTheme();
+
+    if (theme === 'auto') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => applyTheme();
+      mediaQuery.addEventListener('change', handler);
+      return () => mediaQuery.removeEventListener('change', handler);
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (showSplash) {
@@ -321,7 +370,7 @@ export default function App() {
     { id: 'dashboard', label: 'Pannello', icon: LayoutDashboard },
     { id: 'shooters', label: 'Anagrafica', icon: Users },
     { id: 'tournaments', label: 'Tornei', icon: Layers },
-    { id: 'contests', label: 'Gare', icon: SettingsIcon },
+    { id: 'contests', label: 'Gare', icon: Trophy },
   ];
 
   if (isLoading) {
@@ -445,6 +494,40 @@ export default function App() {
         </div>
 
         <div className="p-4 border-t border-slate-800 space-y-2">
+          {/* Informazioni & Impostazioni */}
+          <div className="space-y-1 pb-4 border-b border-slate-800 mb-4">
+            <button
+              onClick={() => {
+                setActiveTab('info');
+                setSelectedSessionId(null);
+                setIsSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === 'info' 
+                ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm' 
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              <Info size={16} className={activeTab === 'info' ? 'text-sky-400' : 'text-slate-500'} />
+              <span>Informazioni</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('settings');
+                setSelectedSessionId(null);
+                setIsSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === 'settings' 
+                ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm' 
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              <SettingsIcon size={16} className={activeTab === 'settings' ? 'text-sky-400' : 'text-slate-500'} />
+              <span>Impostazioni</span>
+            </button>
+          </div>
+
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Storage</span>
             <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Local Active</span>
@@ -589,6 +672,221 @@ export default function App() {
                     onDelete={handleDeleteSession}
                   />
                 )
+              )}
+
+              {activeTab === 'info' && (
+                <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-300">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+                    <div>
+                      <h2 className="text-2xl font-black text-white uppercase tracking-tight italic">Informazioni & Guida</h2>
+                      <p className="text-xs text-slate-400 mt-1 uppercase font-bold tracking-widest">Manuale d'uso dell'applicazione e dettagli dello sviluppatore</p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl shrink-0">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Versione App</span>
+                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v1.0.0 (Stabile)</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Guida all'uso Card */}
+                    <div className="lg:col-span-2 bg-card-bg border border-slate-800 rounded-3xl p-6 lg:p-8 space-y-6 shadow-xl">
+                      <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+                        <div className="w-10 h-10 bg-sky-500/10 rounded-xl flex items-center justify-center text-sky-400">
+                          <BookOpen size={20} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white tracking-tight uppercase italic">Guida all'uso di Helix Pro</h3>
+                      </div>
+
+                      <div className="space-y-6 overflow-y-auto max-h-[50vh] high-density-scroll pr-2">
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-black text-sky-400 uppercase tracking-widest">1. Dashboard & Creazione Gara</h4>
+                          <p className="text-xs text-slate-300 leading-relaxed">
+                            Dal pannello principale è possibile visualizzare tutte le attività in corso. Per iniziare a registrare una nuova competizione, premi su <strong>"Gestione Gare"</strong> e poi su <strong>"Crea Nuova Gara"</strong>. Puoi impostare il nome, la data, il numero di serie (es. 2 o 3) ed il numero di bersagli per ciascuna serie.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-black text-sky-400 uppercase tracking-widest">2. Iscrizioni & Cassa</h4>
+                          <p className="text-xs text-slate-300 leading-relaxed">
+                            Prima di aggiungere iscritti a una gara, assicurati che siano registrati nell'<strong>Anagrafica Tiratori</strong> (centralizzata). All'interno della scheda di gestione gara, potrai selezionare rapidamente i tiratori dall'elenco a discesa, specificare la loro categoria e lo stato del pagamento. L'app calcola in automatico le quote dovute e gestisce la cassa totale della competizione.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-black text-sky-400 uppercase tracking-widest">3. Inserimento Punteggi (Scoring Grid)</h4>
+                          <p className="text-xs text-slate-300 leading-relaxed">
+                            La griglia dei punteggi è progettata per un uso intensivo e veloce. Ogni riga rappresenta un tiratore iscritto. Puoi inserire i punteggi per ogni serie digitando direttamente i numeri colpiti. Il sistema elabora e aggiorna istantaneamente la somma dei bersagli colpiti e calcola le classifiche live in tempo reale.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-black text-sky-400 uppercase tracking-widest">4. Classifiche & Sbarramenti (Barrage)</h4>
+                          <p className="text-xs text-slate-300 leading-relaxed">
+                            Al termine delle serie, il sistema genera classifiche distinte: Generale e suddivisa per le singole Categorie di merito. In presenza di tiratori a pari merito, puoi configurare una serie di sbarramento (Barrage) per determinare le prime posizioni sul podio direttamente dalla tab dedicata, sia ad eliminazione diretta che d'ufficio.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-black text-sky-400 uppercase tracking-widest">5. Ripartizione Montepremi & Reintegro</h4>
+                          <p className="text-xs text-slate-300 leading-relaxed">
+                            L'applicazione include un calcolatore automatico dei premi integrato con le regole federali e proprietarie. Il sistema gestisce in automatico il <strong>"Reintegro Atleti"</strong>, detraendo la quota dei servizi campo e la quota iscrizione direttamente dalla vincita finale spettante al tiratore, semplificando la contabilità della gara.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sviluppatore Card */}
+                    <div className="bg-card-bg border border-slate-800 rounded-3xl p-6 flex flex-col justify-between space-y-6 shadow-xl relative overflow-hidden">
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-amber-500/5 rounded-full blur-[60px] pointer-events-none"></div>
+                      
+                      <div className="space-y-6 relative z-10">
+                        <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+                          <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-500">
+                            <Target size={20} />
+                          </div>
+                          <h3 className="text-lg font-bold text-white tracking-tight uppercase italic">Sviluppatore</h3>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="text-center py-6 bg-slate-950/40 border border-slate-800 rounded-2xl space-y-2">
+                            <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center font-black text-slate-900 text-2xl mx-auto shadow-lg shadow-amber-500/10 uppercase italic">
+                              GC
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-black text-white uppercase tracking-tight">Giuseppe Antonino Cotroneo</h4>
+                              <button 
+                                onClick={() => api.openExternal('https://github.com/Cotrox')}
+                                className="text-[10px] text-amber-400 font-bold hover:text-amber-300 uppercase tracking-widest flex items-center gap-1 mx-auto transition-colors"
+                              >
+                                @Cotrox <ExternalLink size={10} />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2 text-xs text-slate-400 leading-relaxed">
+                            <p>
+                              HeliX Pro è stato sviluppato per fornire una soluzione gestionale desktop allo stato dell'arte dedicata alle associazioni sportive di tiro.
+                            </p>
+                            <p>
+                              Il sistema è progettato per essere interamente offline, sicuro, ultraveloce e autosufficiente dal punto di vista dell'archiviazione dati.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Buy me a coffee Button */}
+                      <div className="space-y-3 relative z-10">
+                        <button
+                          onClick={() => api.openExternal('https://paypal.me/Cotrox')}
+                          className="w-full bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 cursor-pointer"
+                        >
+                          <Coffee size={18} className="animate-bounce" />
+                          <span className="text-[10px] font-black uppercase tracking-wider">Offri un Caffè</span>
+                        </button>
+                        <p className="text-[9px] text-slate-500 text-center uppercase font-bold tracking-widest">Supporta lo sviluppo continuativo dell'App</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'settings' && (
+                <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
+                  <div className="border-b border-slate-800 pb-6">
+                    <h2 className="text-2xl font-black text-white uppercase tracking-tight italic">Impostazioni</h2>
+                    <p className="text-xs text-slate-400 mt-1 uppercase font-bold tracking-widest">Configura le preferenze grafiche e visualizza lo stato del sistema</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-8">
+                    {/* Tema Card */}
+                    <div className="bg-card-bg border border-slate-800 rounded-3xl p-6 lg:p-8 space-y-6 shadow-xl">
+                      <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+                        <div className="w-10 h-10 bg-sky-500/10 rounded-xl flex items-center justify-center text-sky-400">
+                          <Sun size={20} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white tracking-tight uppercase italic">Tema Grafico</h3>
+                      </div>
+
+                      <div className="space-y-4">
+                        <p className="text-xs text-slate-300 leading-relaxed">
+                          Scegli l'aspetto dell'applicazione. L'opzione <strong>"Automatico"</strong> sincronizza l'app direttamente con il tema chiaro/scuro del tuo sistema operativo (Windows).
+                        </p>
+
+                        <div className="grid grid-cols-3 gap-4">
+                          <button
+                            onClick={() => setTheme('light')}
+                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${
+                              theme === 'light'
+                              ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
+                              : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
+                            }`}
+                          >
+                            <Sun size={28} />
+                            <span className="text-[10px] font-black uppercase tracking-wider font-bold">Chiaro</span>
+                          </button>
+
+                          <button
+                            onClick={() => setTheme('dark')}
+                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${
+                              theme === 'dark'
+                              ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
+                              : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
+                            }`}
+                          >
+                            <Moon size={28} />
+                            <span className="text-[10px] font-black uppercase tracking-wider font-bold">Scuro</span>
+                          </button>
+
+                          <button
+                            onClick={() => setTheme('auto')}
+                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${
+                              theme === 'auto'
+                              ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
+                              : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
+                            }`}
+                          >
+                            <Monitor size={28} />
+                            <span className="text-[10px] font-black uppercase tracking-wider font-bold">Automatico</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stato di Sistema Card */}
+                    <div className="bg-card-bg border border-slate-800 rounded-3xl p-6 lg:p-8 space-y-6 shadow-xl">
+                      <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+                        <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400">
+                          <Database size={20} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white tracking-tight uppercase italic">Stato del Database</h3>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="p-4 bg-slate-950/40 border border-slate-850 rounded-2xl space-y-1">
+                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest block">Motore Database</span>
+                          <span className="text-slate-200 font-bold flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Node Native SQLite (DatabaseSync)
+                          </span>
+                        </div>
+
+                        <div className="p-4 bg-slate-950/40 border border-slate-850 rounded-2xl space-y-1">
+                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest block">Stato Sincronizzazione</span>
+                          <span className="text-slate-200 font-bold flex items-center gap-2">
+                            Transazionale WAL Committata
+                          </span>
+                        </div>
+
+                        <div className="p-4 bg-slate-950/40 border border-slate-850 rounded-2xl space-y-1 md:col-span-2">
+                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest block">Percorso Database Utente</span>
+                          <span className="text-slate-300 font-mono text-[10px] break-all select-all block mt-0.5">
+                            %APPDATA%/Helix Pro/helix-pro.sqlite3
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </motion.div>
           </AnimatePresence>

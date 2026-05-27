@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { createDatabase } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -49,6 +49,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('db:read-collection', (_event, collectionName) => database.readCollection(collectionName));
   ipcMain.handle('db:write-collection', (_event, collectionName, items) => database.writeCollection(collectionName, items));
+  ipcMain.handle('open-external', async (_event, url) => {
+    await shell.openExternal(url);
+    return { success: true };
+  });
 
   createMainWindow();
 

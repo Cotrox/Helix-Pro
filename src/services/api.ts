@@ -22,5 +22,11 @@ export const api = {
   saveTournaments: async (tournaments: any[]) => {
     if (!window.desktopAPI) throw new Error('Desktop API non disponibile');
     return window.desktopAPI.writeCollection('tournaments', tournaments);
+  },
+  openExternal: async (url: string) => {
+    if (window.desktopAPI && window.desktopAPI.openExternal) {
+      return window.desktopAPI.openExternal(url);
+    }
+    window.open(url, '_blank');
   }
 };
