@@ -932,9 +932,33 @@ export default function App() {
         {/* Console Footer */}
         <footer className="h-10 bg-slate-900 border-t border-slate-800 px-6 flex items-center justify-between shrink-0">
           <div className="flex gap-6 text-[9px] text-slate-500 font-bold uppercase tracking-widest">
-            <span className="hover:text-slate-300 cursor-help transition-colors">[F1] AIUTO</span>
-            <span className="hover:text-slate-300 cursor-pointer transition-colors">[S] SALVA JSON</span>
-            <span className="hover:text-slate-300 cursor-pointer transition-colors">[R] REFRESH</span>
+            <span 
+              onClick={() => {
+                setActiveTab('info');
+                setSelectedSessionId(null);
+                toast.info('Navigazione all\'area informazioni');
+              }}
+              className="hover:text-slate-300 cursor-pointer transition-colors"
+            >
+              [F1] AIUTO
+            </span>
+            <span 
+              onClick={exportState}
+              className="hover:text-slate-300 cursor-pointer transition-colors"
+            >
+              [F2] SALVA JSON
+            </span>
+            <span 
+              onClick={() => {
+                toast.info('Ricaricamento dell\'applicazione...');
+                setTimeout(() => {
+                  window.location.reload();
+                }, 800);
+              }}
+              className="hover:text-slate-300 cursor-pointer transition-colors"
+            >
+              [F3] REFRESH
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
