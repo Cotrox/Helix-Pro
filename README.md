@@ -47,8 +47,6 @@ Se sei un utente finale, scarica l'ultimo installer disponibile nella sezione **
 *   **Installer Setup (`.exe`):** Installa l'app nel sistema creandone le scorciatoie nel menu Start e sul Desktop.
 *   **Versione Portable (`.exe`):** Eseguibile autonomo pronto all'uso, ideale per essere avviato da una chiavetta USB senza installazione.
 
-Se sei uno sviluppatore e desideri compilare o avviare il progetto da sorgente, consulta il file [COMMANDS.md](COMMANDS.md) per l'elenco completo dei comandi di sviluppo e build.
-
 ---
 
 ## ☕ Supporta il Progetto
