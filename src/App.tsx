@@ -30,7 +30,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-import { Shooter, Session, CompetitionSettings, CATEGORIES, Tournament } from './types';
+import { Shooter, Session, CompetitionSettings, CATEGORIES, Tournament, Feedback } from './types';
 import { api } from './services/api';
 import { downloadFile, STORAGE_KEYS } from './services/storageService';
 
@@ -39,6 +39,7 @@ import ShooterRegistry from './components/ShooterRegistry';
 import ContestManager from './components/ContestManager';
 import ContestDetail from './components/ContestDetail';
 import TournamentView from './components/TournamentView';
+import FeedbackCard from './components/FeedbackCard';
 
 const INITIAL_SETTINGS: CompetitionSettings = {
   name: "Nuova Gara",
@@ -82,6 +83,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -160,10 +162,11 @@ export default function App() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [loadedShooters, loadedSessions, loadedTournaments]: [any[], any[], any[]] = await Promise.all([
+        const [loadedShooters, loadedSessions, loadedTournaments, loadedFeedbacks]: [any[], any[], any[], any[]] = await Promise.all([
           api.fetchShooters(),
           api.fetchSessions(),
-          api.fetchTournaments()
+          api.fetchTournaments(),
+          api.fetchFeedbacks().catch(() => []) // Fallback in case of SQLite setup delay/issues
         ]);
         
         // Sanitize IDs to strings
@@ -180,10 +183,12 @@ export default function App() {
           }))
         }));
         const sanitizedTournaments = loadedTournaments.map(t => ({ ...t, id: String(t.id) }));
+        const sanitizedFeedbacks = (loadedFeedbacks || []).map(f => ({ ...f, id: String(f.id) }));
 
         setShooters(sanitizedShooters);
         setSessions(sanitizedSessions);
         setTournaments(sanitizedTournaments);
+        setFeedbacks(sanitizedFeedbacks);
         
         // Use ID for selection
         const savedCurrent = localStorage.getItem(STORAGE_KEYS.CURRENT);
@@ -219,7 +224,8 @@ export default function App() {
             await Promise.all([
                 api.saveShooters(shooters),
                 api.saveSessions(sessions),
-                api.saveTournaments(tournaments)
+                api.saveTournaments(tournaments),
+                api.saveFeedbacks(feedbacks)
             ]);
             if (currentSession) {
               localStorage.setItem(STORAGE_KEYS.CURRENT, JSON.stringify(currentSession));
@@ -233,7 +239,7 @@ export default function App() {
     
     const timeoutId = setTimeout(saveData, 1000);
     return () => clearTimeout(timeoutId);
-  }, [shooters, sessions, tournaments, currentSession, isLoading]);
+  }, [shooters, sessions, tournaments, feedbacks, currentSession, isLoading]);
 
   // Snapshot on mount (first access of browser session)
   useEffect(() => {
@@ -269,6 +275,7 @@ export default function App() {
             shooters,
             sessions,
             tournaments,
+            feedbacks,
             selectedSessionId
           };
           downloadFile(JSON.stringify(data, null, 2), `helix_pro_backup_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
@@ -289,7 +296,7 @@ export default function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [shooters, sessions, tournaments, selectedSessionId]);
+  }, [shooters, sessions, tournaments, feedbacks, selectedSessionId]);
 
   const handleUpdateSessionById = (id: string, updates: Partial<Session>) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
@@ -375,6 +382,7 @@ export default function App() {
         shooters,
         sessions,
         tournaments,
+        feedbacks,
         selectedSessionId
       };
       downloadFile(JSON.stringify(data, null, 2), `helix_pro_backup_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
@@ -394,6 +402,7 @@ export default function App() {
         if (data.shooters) setShooters(data.shooters);
         if (data.sessions) setSessions(data.sessions);
         if (data.tournaments) setTournaments(data.tournaments);
+        if (data.feedbacks) setFeedbacks(data.feedbacks);
         if (data.selectedSessionId) setSelectedSessionId(data.selectedSessionId);
         toast.success('Dati importati con successo');
       } catch (err) {
@@ -824,6 +833,9 @@ export default function App() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Feedback Card */}
+                  <FeedbackCard feedbacks={feedbacks} onUpdate={setFeedbacks} />
                 </div>
               )}
 

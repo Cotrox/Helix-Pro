@@ -6,7 +6,8 @@ import { app } from 'electron';
 const COLLECTIONS = {
   shooters: 'shooters',
   sessions: 'sessions',
-  tournaments: 'tournaments'
+  tournaments: 'tournaments',
+  feedbacks: 'feedbacks'
 };
 
 const sanitizeFileName = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'helix-pro';
@@ -35,6 +36,12 @@ export function createDatabase(projectName) {
     );
 
     CREATE TABLE IF NOT EXISTS tournaments (
+      sort_index INTEGER NOT NULL,
+      id TEXT PRIMARY KEY,
+      payload TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS feedbacks (
       sort_index INTEGER NOT NULL,
       id TEXT PRIMARY KEY,
       payload TEXT NOT NULL

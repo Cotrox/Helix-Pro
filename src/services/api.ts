@@ -23,6 +23,14 @@ export const api = {
     if (!window.desktopAPI) throw new Error('Desktop API non disponibile');
     return window.desktopAPI.writeCollection('tournaments', tournaments);
   },
+  fetchFeedbacks: async () => {
+    if (!window.desktopAPI) throw new Error('Desktop API non disponibile');
+    return window.desktopAPI.readCollection('feedbacks');
+  },
+  saveFeedbacks: async (feedbacks: any[]) => {
+    if (!window.desktopAPI) throw new Error('Desktop API non disponibile');
+    return window.desktopAPI.writeCollection('feedbacks', feedbacks);
+  },
   openExternal: async (url: string) => {
     if (window.desktopAPI && window.desktopAPI.openExternal) {
       return window.desktopAPI.openExternal(url);

@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { CompetitionSettings } from '../types';
+import { CompetitionSettings, Feedback } from '../types';
 
 const formatDateStr = (dateStr: string) => {
   if (!dateStr) return 'N/A';
@@ -279,4 +279,46 @@ export const exportFullReportToPDF = (
   });
   
   doc.save(filename);
+};
+
+export const exportFeedbackToPDF = (feedbacks: Feedback[]) => {
+  const doc = new jsPDF();
+  
+  // Title
+  doc.setFontSize(22);
+  doc.setTextColor(41, 128, 185); // Slate blue
+  doc.text("Elenco Feedback", 14, 22);
+  
+  // Subtitle
+  doc.setFontSize(14);
+  doc.setTextColor(100);
+  doc.text("Lista dei Feedback", 14, 30);
+  
+  // Export date
+  doc.setFontSize(10);
+  doc.setTextColor(120);
+  const today = new Date().toLocaleDateString('it-IT');
+  doc.text(`Esportata in Data: ${today}`, 14, 38);
+  
+  // Table data preparation
+  const headers = ["Titolo", "Data", "Tipologia", "Descrizione"];
+  const data = feedbacks.map(f => [f.title, f.date, f.type, f.description]);
+  
+  autoTable(doc, {
+    startY: 45,
+    head: [headers],
+    body: data,
+    theme: 'grid',
+    headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [245, 245, 245] },
+    columnStyles: {
+      0: { cellWidth: 40 }, // Title
+      1: { cellWidth: 25 }, // Date
+      2: { cellWidth: 35 }, // Type
+      3: { cellWidth: 'auto' } // Description (let it wrap)
+    },
+    margin: { top: 45 },
+  });
+  
+  doc.save("elenco_feedback.pdf");
 };

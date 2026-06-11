@@ -1,6 +1,6 @@
 export {};
 
-type DesktopCollectionName = 'shooters' | 'sessions' | 'tournaments';
+type DesktopCollectionName = 'shooters' | 'sessions' | 'tournaments' | 'feedbacks';
 
 interface DesktopAPI {
   readCollection: (collectionName: DesktopCollectionName) => Promise<any[]>;

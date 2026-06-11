@@ -125,3 +125,11 @@ export const CATEGORIES: ShooterCategory[] = [
   '3^ Categoria',
   'Altro'
 ];
+
+export interface Feedback {
+  id: string;
+  title: string;
+  date: string;
+  type: 'Problema' | 'Suggerimento';
+  description: string;
+}
