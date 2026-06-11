@@ -17,4 +17,9 @@ Thumbs.db
 FUTURE_TIPS.md
 COMMANDS.md
 *.sqlite3
+desktop.ini
+.vscode/
+.idea/
+start_log.txt
+
 
