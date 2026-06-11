@@ -18,8 +18,9 @@ COSA PUOI FARE CON HELIX PRO:
 SOSTIENI LO SVILUPPO (OPZIONALE):
 Helix Pro è un software gratuito sviluppato con passione. Se trovi 
 utile questo strumento e desideri sostenere il lavoro dietro al suo 
-sviluppo continuo, puoi offrirmi un caffè simbolico su Ko-fi:
-👉 https://ko-fi.com/cotrox
+sviluppo continuo, puoi fare una donazione libera tramite:
+👉 Ko-fi: https://ko-fi.com/cotrox
+👉 PayPal: https://www.paypal.com/paypalme/peppecotro
 (Il contributo è totalmente volontario e facoltativo).
 
 Cliccando su "Accetto" potrai procedere con l'installazione guidata 
