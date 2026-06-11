@@ -14,3 +14,7 @@ Thumbs.db
 .env.local
 .env.*.local
 .env
+FUTURE_TIPS.md
+COMMANDS.md
+*.sqlite3
+

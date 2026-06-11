@@ -1,0 +1,28 @@
+name: Rilascio Automatico (Build & Release)
+
+on:
+  push:
+    tags:
+      - 'v*' # Si attiva quando fai il push di un tag che inizia con "v" (es: v1.0.0)
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v4
+
+      - name: Configurazione Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Installazione dipendenze
+        run: npm ci
+
+      - name: Compilazione ed esportazione dell'app
+        run: npm run dist -- --publish always
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
