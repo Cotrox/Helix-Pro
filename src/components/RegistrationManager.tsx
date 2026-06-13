@@ -49,6 +49,20 @@ export default function RegistrationManager({ shooters, registrations, settings,
 
   // Order Management state
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [orderMode, setOrderMode] = useState<'drag' | 'input' | 'pattern'>('drag');
+  const [inputPositions, setInputPositions] = useState<Record<string, string>>({});
+  const [selectedPattern, setSelectedPattern] = useState<'shift' | 'halfFlipA' | 'halfFlipB' | 'reverse' | null>(null);
+
+  useEffect(() => {
+    if (isOrderModalOpen) {
+      const initial: Record<string, string> = {};
+      (registrations || []).forEach(r => {
+        initial[r.id] = (r.shootingOrder || '').toString();
+      });
+      setInputPositions(initial);
+      setSelectedPattern(null);
+    }
+  }, [isOrderModalOpen, registrations]);
 
   const currentTournament = useMemo(() => 
     tournaments.find(t => t.id === settings.tournamentId), 
@@ -341,6 +355,90 @@ export default function RegistrationManager({ shooters, registrations, settings,
     }));
     onUpdate(resetRegs);
     toast.success('Ordine rimpistinato (per iscrizione)');
+  };
+
+  const handleConfirmInputOrder = () => {
+    const N = registrations.length;
+    const parsed: Record<string, number> = {};
+
+    for (const reg of registrations) {
+      const valStr = inputPositions[reg.id];
+      if (valStr === undefined || valStr === null || valStr.trim() === '') {
+        toast.error('Inserisci una posizione valida per tutti i tiratori');
+        return;
+      }
+      const val = parseInt(valStr, 10);
+      if (isNaN(val) || val.toString() !== valStr.trim()) {
+        toast.error('Le posizioni inserite devono essere numeri interi');
+        return;
+      }
+      if (val < 1 || val > N) {
+        toast.error(`Le posizioni devono essere comprese tra 1 e ${N}`);
+        return;
+      }
+      parsed[reg.id] = val;
+    }
+
+    const values = Object.values(parsed);
+    const unique = new Set(values);
+    if (unique.size !== values.length) {
+      toast.error('Ci sono posizioni duplicate. Ogni tiratore deve avere una posizione univoca');
+      return;
+    }
+
+    const updatedRegs = registrations.map(reg => ({
+      ...reg,
+      shootingOrder: parsed[reg.id]
+    }));
+
+    updatedRegs.sort((a, b) => a.shootingOrder - b.shootingOrder);
+    onUpdate(updatedRegs);
+    toast.success('Ordine di tiro aggiornato con successo');
+    setIsOrderModalOpen(false);
+  };
+
+  const handleApplyPattern = () => {
+    if (!selectedPattern) {
+      toast.error('Seleziona un pattern prima di confermare');
+      return;
+    }
+
+    const sortedRegs = [...registrations].sort((a, b) => (a.shootingOrder || 0) - (b.shootingOrder || 0));
+    if (sortedRegs.length === 0) return;
+
+    let newRegs = [...sortedRegs];
+
+    switch (selectedPattern) {
+      case 'shift': {
+        newRegs = [...sortedRegs.slice(1), sortedRegs[0]];
+        break;
+      }
+      case 'halfFlipA': {
+        const mid = Math.ceil(sortedRegs.length / 2);
+        newRegs = [...sortedRegs.slice(mid), ...sortedRegs.slice(0, mid)];
+        break;
+      }
+      case 'halfFlipB': {
+        const mid = Math.ceil(sortedRegs.length / 2);
+        const firstHalf = sortedRegs.slice(0, mid);
+        const secondHalf = sortedRegs.slice(mid);
+        newRegs = [...secondHalf, ...[...firstHalf].reverse()];
+        break;
+      }
+      case 'reverse': {
+        newRegs = [...sortedRegs].reverse();
+        break;
+      }
+    }
+
+    const updated = newRegs.map((r, idx) => ({
+      ...r,
+      shootingOrder: idx + 1
+    }));
+
+    onUpdate(updated);
+    toast.success('Pattern applicato con successo');
+    setIsOrderModalOpen(false);
   };
 
   const handleDragEndOrder = (event: DragEndEvent) => {
@@ -639,36 +737,183 @@ export default function RegistrationManager({ shooters, registrations, settings,
                 </button>
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Riordina Manualmente (Drag & Drop)</label>
-                <div className="bg-slate-950 rounded-2xl border border-slate-800 p-2 max-h-[300px] overflow-y-auto high-density-scroll">
-                  <DndContext 
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEndOrder}
+              {/* Reordering Mode Tabs */}
+              <div className="flex border border-slate-800 bg-slate-950/30 p-1 rounded-xl gap-1">
+                {(['drag', 'input', 'pattern'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setOrderMode(mode)}
+                    className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                      orderMode === mode 
+                        ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-md font-black' 
+                        : 'text-slate-400 border border-transparent hover:text-slate-200 hover:bg-slate-800/30 font-bold'
+                    }`}
                   >
-                    <SortableContext 
-                      items={registrations.map(r => r.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="space-y-1">
-                        {registrations.map(reg => (
-                          <SortableItem key={reg.id} reg={reg} shooter={shooters.find(s => s.id === reg.shooterId)} />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                </div>
+                    {mode === 'drag' ? 'Drag & Drop' : mode === 'input' ? 'Riordina da Input' : 'Riordina da Pattern'}
+                  </button>
+                ))}
               </div>
+
+              {orderMode === 'drag' && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Riordina Manualmente (Drag & Drop)</label>
+                  <div className="bg-slate-950 rounded-2xl border border-slate-800 p-2 max-h-[300px] overflow-y-auto high-density-scroll">
+                    <DndContext 
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEndOrder}
+                    >
+                      <SortableContext 
+                        items={registrations.map(r => r.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="space-y-1">
+                          {registrations.map(reg => (
+                            <SortableItem key={reg.id} reg={reg} shooter={shooters.find(s => s.id === reg.shooterId)} />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </div>
+                </div>
+              )}
+
+              {orderMode === 'input' && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Inserisci le posizioni numeriche</label>
+                  <div className="bg-slate-950 rounded-2xl border border-slate-800 p-2 max-h-[300px] overflow-y-auto high-density-scroll space-y-1">
+                    {[...registrations].sort((a, b) => (a.shootingOrder || 0) - (b.shootingOrder || 0)).map((reg, idx) => {
+                      const shooter = shooters.find(s => s.id === reg.shooterId);
+                      return (
+                        <div 
+                          key={reg.id} 
+                          className="flex items-center gap-3 p-2 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-black text-amber-500 font-mono border border-slate-700 shadow-inner">
+                            {idx + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] font-black text-slate-200 uppercase truncate">
+                              {shooter?.lastName} {shooter?.firstName}
+                            </div>
+                            <div className="text-[8px] text-slate-500 uppercase font-bold tracking-tighter">
+                              {shooter?.category}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] text-slate-500 uppercase font-bold">Posizione:</span>
+                            <input
+                              type="text"
+                              value={inputPositions[reg.id] || ''}
+                              onChange={e => setInputPositions(prev => ({ ...prev, [reg.id]: e.target.value }))}
+                              placeholder={(idx + 1).toString()}
+                              className="w-14 px-2 py-1 bg-slate-950 border border-slate-800 rounded text-center text-xs font-mono font-bold text-slate-200 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {orderMode === 'pattern' && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Seleziona Pattern di Riordinamento</label>
+                  <div className="grid grid-cols-1 gap-2.5 max-h-[300px] overflow-y-auto high-density-scroll pr-1">
+                    {[
+                      {
+                        id: 'shift',
+                        name: 'Slittamento Circolare (Shift)',
+                        desc: 'Ogni tiratore avanza di una posizione nella lista. Chi era primo diventa l\'ultimo.',
+                        example: 'Esempio: [1, 2, 3, 4, 5, 6] → [2, 3, 4, 5, 6, 1]'
+                      },
+                      {
+                        id: 'halfFlipA',
+                        name: 'Inversione per Blocchi Alpha (Half-Flip-A)',
+                        desc: 'La lista viene divisa in due metà; le due metà si scambiano di posto.',
+                        example: 'Esempio: [1, 2, 3, 4, 5, 6] → [4, 5, 6, 1, 2, 3]'
+                      },
+                      {
+                        id: 'halfFlipB',
+                        name: 'Inversione per Blocchi Beta (Half-Flip-B)',
+                        desc: 'La lista viene divisa in due metà; si scambiano di posto e la prima metà viene invertita.',
+                        example: 'Esempio: [1, 2, 3, 4, 5, 6] → [4, 5, 6, 3, 2, 1]'
+                      },
+                      {
+                        id: 'reverse',
+                        name: 'Inversione Speculare Totale (Reverse)',
+                        desc: 'L\'ordine di tiro viene completamente invertito.',
+                        example: 'Esempio: [1, 2, 3, 4, 5, 6] → [6, 5, 4, 3, 2, 1]'
+                      }
+                    ].map(pattern => (
+                      <button
+                        key={pattern.id}
+                        onClick={() => setSelectedPattern(pattern.id as any)}
+                        className={`flex flex-col text-left p-3.5 rounded-xl border transition-all ${
+                          selectedPattern === pattern.id 
+                            ? 'bg-amber-500/10 border-amber-500 text-amber-500 shadow-lg' 
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-300'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-xs font-black uppercase tracking-wider">{pattern.name}</span>
+                          <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                            selectedPattern === pattern.id ? 'border-amber-500 bg-amber-500' : 'border-slate-700'
+                          }`}>
+                            {selectedPattern === pattern.id && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-medium mt-1 leading-normal">{pattern.desc}</p>
+                        <span className="text-[9px] font-mono bg-slate-900 border border-slate-800 text-slate-400 rounded px-1.5 py-0.5 mt-2 self-start uppercase font-bold tracking-tight">
+                          {pattern.example}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="p-6 border-t border-slate-800 bg-slate-900/50">
-              <button 
-                onClick={() => setIsOrderModalOpen(false)}
-                className="w-full py-3 bg-slate-800 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest hover:text-white transition"
-              >
-                Chiudi
-              </button>
+            <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex gap-3">
+              {orderMode === 'drag' ? (
+                <button 
+                  onClick={() => setIsOrderModalOpen(false)}
+                  className="w-full py-3 bg-slate-800 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest hover:text-white transition"
+                >
+                  Chiudi
+                </button>
+              ) : orderMode === 'input' ? (
+                <>
+                  <button 
+                    onClick={() => setIsOrderModalOpen(false)}
+                    className="flex-1 py-3 bg-slate-800 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest hover:text-white transition"
+                  >
+                    Chiudi
+                  </button>
+                  <button 
+                    onClick={handleConfirmInputOrder}
+                    className="flex-1 py-3 bg-amber-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 transition shadow-lg shadow-amber-900/20 font-black"
+                  >
+                    Conferma Ordine
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => setIsOrderModalOpen(false)}
+                    className="flex-1 py-3 bg-slate-800 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest hover:text-white transition"
+                  >
+                    Chiudi
+                  </button>
+                  <button 
+                    onClick={handleApplyPattern}
+                    className="flex-1 py-3 bg-amber-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 transition shadow-lg shadow-amber-900/20 font-black"
+                  >
+                    Conferma Pattern
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
