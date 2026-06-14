@@ -1,7 +1,7 @@
 {
   "name": "helix-pro",
   "private": true,
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Desktop app for managing Helix Pro shooting competitions.",
   "author": "Helix Pro",
   "type": "module",
@@ -74,7 +74,8 @@
     "win": {
       "target": [
         "nsis",
-        "portable"
+        "portable",
+        "appx"
       ]
     },
     "nsis": {
@@ -88,6 +89,12 @@
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "appx": {
+      "identityName": "Cotrox.HelixPro",
+      "publisher": "CN=9028411D-2DD0-48B6-841C-802A01D6F318",
+      "publisherDisplayName": "Cotrox",
+      "displayName": "Helix Pro"
     }
   }
 }
