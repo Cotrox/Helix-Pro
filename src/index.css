@@ -55,25 +55,57 @@ html.light .bg-slate-950 {
   background-color: #F8FAFC !important;
 }
 
-/* Ensure text-white is visible as dark color on light bg, except inside buttons/badges */
+/* Ensure text-white, hover:text-white, and group-hover:text-white are visible as dark color on light bg, except on dark/colored backgrounds */
 html.light .text-white:not(
-  button *, 
-  button, 
-  a *, 
-  a, 
-  .bg-sky-600 *, 
-  .bg-emerald-600 *, 
-  .bg-amber-600 *, 
-  .bg-red-600 *, 
-  .bg-sky-500 *, 
-  .bg-emerald-500 *, 
-  .bg-amber-500 *, 
-  .bg-red-500 *,
-  .bg-gradient-to-r *, 
-  .bg-gradient-to-br *, 
-  .bg-gradient-to-tr *, 
-  .bg-accent-sky *,
-  .active *
+  [class*="bg-sky-"] *, [class*="bg-sky-"],
+  [class*="bg-emerald-"] *, [class*="bg-emerald-"],
+  [class*="bg-amber-"] *, [class*="bg-amber-"],
+  [class*="bg-red-"] *, [class*="bg-red-"],
+  [class*="bg-gradient-"] *, [class*="bg-gradient-"],
+  .bg-accent-sky *, .bg-accent-sky,
+  .active *, .active
+) {
+  color: #0F172A !important;
+}
+
+html.light .hover\:text-white:hover:not(
+  [class*="bg-sky-"] *, [class*="bg-sky-"],
+  [class*="bg-emerald-"] *, [class*="bg-emerald-"],
+  [class*="bg-amber-"] *, [class*="bg-amber-"],
+  [class*="bg-red-"] *, [class*="bg-red-"],
+  [class*="bg-gradient-"] *, [class*="bg-gradient-"],
+  .bg-accent-sky *, .bg-accent-sky,
+  .active *, .active
+),
+html.light [class*="hover:text-white"]:hover:not(
+  [class*="bg-sky-"] *, [class*="bg-sky-"],
+  [class*="bg-emerald-"] *, [class*="bg-emerald-"],
+  [class*="bg-amber-"] *, [class*="bg-amber-"],
+  [class*="bg-red-"] *, [class*="bg-red-"],
+  [class*="bg-gradient-"] *, [class*="bg-gradient-"],
+  .bg-accent-sky *, .bg-accent-sky,
+  .active *, .active
+) {
+  color: #0F172A !important;
+}
+
+html.light .group:hover .group-hover\:text-white:not(
+  [class*="bg-sky-"] *, [class*="bg-sky-"],
+  [class*="bg-emerald-"] *, [class*="bg-emerald-"],
+  [class*="bg-amber-"] *, [class*="bg-amber-"],
+  [class*="bg-red-"] *, [class*="bg-red-"],
+  [class*="bg-gradient-"] *, [class*="bg-gradient-"],
+  .bg-accent-sky *, .bg-accent-sky,
+  .active *, .active
+),
+html.light .group:hover [class*="group-hover:text-white"]:not(
+  [class*="bg-sky-"] *, [class*="bg-sky-"],
+  [class*="bg-emerald-"] *, [class*="bg-emerald-"],
+  [class*="bg-amber-"] *, [class*="bg-amber-"],
+  [class*="bg-red-"] *, [class*="bg-red-"],
+  [class*="bg-gradient-"] *, [class*="bg-gradient-"],
+  .bg-accent-sky *, .bg-accent-sky,
+  .active *, .active
 ) {
   color: #0F172A !important;
 }

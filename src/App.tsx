@@ -7,12 +7,12 @@ import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'sonner';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Settings as SettingsIcon, 
-  History, 
-  Download, 
+import {
+  LayoutDashboard,
+  Users,
+  Settings as SettingsIcon,
+  History,
+  Download,
   Upload,
   Layers,
   Database,
@@ -90,9 +90,9 @@ export default function App() {
   const [rollbackConfirmIdx, setRollbackConfirmIdx] = useState<number | null>(null);
 
   // Derived state
-  const currentSession = React.useMemo(() => 
+  const currentSession = React.useMemo(() =>
     sessions.find(s => s.id === selectedSessionId) || (sessions.length > 0 ? sessions[0] : null),
-  [sessions, selectedSessionId]);
+    [sessions, selectedSessionId]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -117,7 +117,7 @@ export default function App() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('helix_pro_theme', theme);
-    
+
     const applyTheme = () => {
       const root = document.documentElement;
       if (theme === 'light') {
@@ -168,16 +168,16 @@ export default function App() {
           api.fetchTournaments(),
           api.fetchFeedbacks().catch(() => []) // Fallback in case of SQLite setup delay/issues
         ]);
-        
+
         // Sanitize IDs to strings
         const sanitizedShooters = loadedShooters.map(s => ({ ...s, id: String(s.id) }));
-        const sanitizedSessions = loadedSessions.map(s => ({ 
-          ...s, 
+        const sanitizedSessions = loadedSessions.map(s => ({
+          ...s,
           id: String(s.id),
           registrations: (s.registrations || []).filter(Boolean).map((r: any) => ({ ...r, id: String(r.id), shooterId: String(r.shooterId) })),
           scores: (s.scores || []).filter(Boolean).map((sc: any) => ({ ...sc, shooterId: String(sc.shooterId) })),
-          barrages: (s.barrages || []).filter(Boolean).map((b: any) => ({ 
-            ...b, 
+          barrages: (s.barrages || []).filter(Boolean).map((b: any) => ({
+            ...b,
             id: String(b.id),
             participants: (b.participants || []).filter(Boolean).map((p: any) => String(p))
           }))
@@ -189,7 +189,7 @@ export default function App() {
         setSessions(sanitizedSessions);
         setTournaments(sanitizedTournaments);
         setFeedbacks(sanitizedFeedbacks);
-        
+
         // Use ID for selection
         const savedCurrent = localStorage.getItem(STORAGE_KEYS.CURRENT);
         if (savedCurrent) {
@@ -215,28 +215,28 @@ export default function App() {
   // Persistence to Server
   useEffect(() => {
     if (isInitialMount.current) {
-        if (!isLoading) isInitialMount.current = false;
-        return;
+      if (!isLoading) isInitialMount.current = false;
+      return;
     }
-    
+
     const saveData = async () => {
-        try {
-            await Promise.all([
-                api.saveShooters(shooters),
-                api.saveSessions(sessions),
-                api.saveTournaments(tournaments),
-                api.saveFeedbacks(feedbacks)
-            ]);
-            if (currentSession) {
-              localStorage.setItem(STORAGE_KEYS.CURRENT, JSON.stringify(currentSession));
-            } else {
-              localStorage.removeItem(STORAGE_KEYS.CURRENT);
-            }
-        } catch (error) {
-            console.error('Save failed', error);
+      try {
+        await Promise.all([
+          api.saveShooters(shooters),
+          api.saveSessions(sessions),
+          api.saveTournaments(tournaments),
+          api.saveFeedbacks(feedbacks)
+        ]);
+        if (currentSession) {
+          localStorage.setItem(STORAGE_KEYS.CURRENT, JSON.stringify(currentSession));
+        } else {
+          localStorage.removeItem(STORAGE_KEYS.CURRENT);
         }
+      } catch (error) {
+        console.error('Save failed', error);
+      }
     };
-    
+
     const timeoutId = setTimeout(saveData, 1000);
     return () => clearTimeout(timeoutId);
   }, [shooters, sessions, tournaments, feedbacks, currentSession, isLoading]);
@@ -244,13 +244,13 @@ export default function App() {
   // Snapshot on mount (first access of browser session)
   useEffect(() => {
     if (!isLoading && shooters.length > 0 && !sessionStorage.getItem('helix_pro_snapshot_taken')) {
-        const newSnapshot = {
-            timestamp: new Date().toISOString(),
-            shooters: JSON.parse(JSON.stringify(shooters)),
-            sessions: JSON.parse(JSON.stringify(sessions)),
-            tournaments: JSON.parse(JSON.stringify(tournaments))
-        };
-        setSystemHistory(prev => [newSnapshot, ...prev].slice(0, 3));
+      const newSnapshot = {
+        timestamp: new Date().toISOString(),
+        shooters: JSON.parse(JSON.stringify(shooters)),
+        sessions: JSON.parse(JSON.stringify(sessions)),
+        tournaments: JSON.parse(JSON.stringify(tournaments))
+      };
+      setSystemHistory(prev => [newSnapshot, ...prev].slice(0, 3));
       sessionStorage.setItem('helix_pro_snapshot_taken', 'true');
     }
   }, [isLoading, shooters.length]);
@@ -309,7 +309,7 @@ export default function App() {
     setShooters(snapshot.shooters);
     setSessions(snapshot.sessions);
     setTournaments(snapshot.tournaments);
-    
+
     // Remove the applied snapshot and everything before it to keep it clean? 
     // Actually the user said "tornando ai dati precedenti", usually it's better to keep it but users might want to clear it.
     // I'll keep it for now but the UI will show it can be reverted.
@@ -319,7 +319,7 @@ export default function App() {
   const handleDeleteSession = (id: string) => {
     setSessions(prev => {
       const remaining = prev.filter((s: Session) => s.id !== id);
-      
+
       if (selectedSessionId === id) {
         if (remaining.length > 0) {
           setSelectedSessionId(remaining[0].id);
@@ -331,7 +331,7 @@ export default function App() {
 
       return remaining;
     });
-    
+
     toast.success('Gara eliminata correttamente');
   };
 
@@ -431,7 +431,7 @@ export default function App() {
   return (
     <div className="flex h-screen w-full bg-brand-bg text-slate-200 font-sans overflow-hidden">
       <Toaster position="top-right" richColors theme="dark" />
-      
+
       <AnimatePresence>
         {showSplash && (
           <motion.div
@@ -442,7 +442,7 @@ export default function App() {
           >
             {/* Background elements */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-sky-500/10 rounded-full blur-[120px] pointer-events-none"></div>
-            
+
             <motion.div
               initial={{ scale: 0.8, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -457,29 +457,29 @@ export default function App() {
                   Helix <span className="text-sky-400">Pro</span>
                 </h1>
                 <div className="flex items-center gap-2 justify-center">
-                   <div className="h-px w-8 bg-slate-800"></div>
-                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Management System</p>
-                   <div className="h-px w-8 bg-slate-800"></div>
+                  <div className="h-px w-8 bg-slate-800"></div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Management System</p>
+                  <div className="h-px w-8 bg-slate-800"></div>
                 </div>
               </div>
             </motion.div>
-            
-            <motion.div 
+
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1, duration: 1 }}
               className="absolute bottom-16 flex flex-col items-center gap-4"
             >
-               <div className="flex gap-1">
-                 {[0, 1, 2].map((i) => (
-                   <motion.div
-                     key={i}
-                     animate={{ opacity: [0.2, 1, 0.2] }}
-                     transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
-                     className="w-1.5 h-1.5 rounded-full bg-sky-500"
-                   />
-                 ))}
-               </div>
+              <div className="flex gap-1">
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    animate={{ opacity: [0.2, 1, 0.2] }}
+                    transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                    className="w-1.5 h-1.5 rounded-full bg-sky-500"
+                  />
+                ))}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -510,7 +510,7 @@ export default function App() {
               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">Management System</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => setIsSidebarOpen(false)}
             className="p-2 text-slate-400 hover:text-white bg-slate-800/50 rounded-lg border border-slate-700"
           >
@@ -527,11 +527,10 @@ export default function App() {
                 if (tab.id === 'contests') setSelectedSessionId(null);
                 setIsSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === tab.id 
-                ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                  ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
+                }`}
             >
               <tab.icon size={16} className={activeTab === tab.id ? 'text-sky-400' : 'text-slate-500'} />
               <span>{tab.label}</span>
@@ -548,11 +547,10 @@ export default function App() {
                 setSelectedSessionId(null);
                 setIsSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === 'info' 
-                ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'info'
+                  ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
+                }`}
             >
               <Info size={16} className={activeTab === 'info' ? 'text-sky-400' : 'text-slate-500'} />
               <span>Informazioni</span>
@@ -563,11 +561,10 @@ export default function App() {
                 setSelectedSessionId(null);
                 setIsSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === 'settings' 
-                ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'settings'
+                  ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
+                }`}
             >
               <SettingsIcon size={16} className={activeTab === 'settings' ? 'text-sky-400' : 'text-slate-500'} />
               <span>Impostazioni</span>
@@ -579,21 +576,21 @@ export default function App() {
             <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Local Active</span>
           </div>
           <div className="flex gap-2">
-            <button 
-              onClick={exportState} 
+            <button
+              onClick={exportState}
               className="flex-1 flex items-center justify-center gap-1.5 text-[9px] font-black text-slate-400 hover:bg-slate-800 hover:text-white px-2 py-2.5 rounded border border-slate-700 transition uppercase tracking-tighter"
               title="Backup Completo"
             >
               <Download size={12} /> BACKUP
             </button>
-            <label 
+            <label
               className="flex-1 flex items-center justify-center gap-1.5 text-[9px] font-black text-slate-400 hover:bg-slate-800 hover:text-white px-2 py-2.5 rounded border border-slate-700 cursor-pointer transition uppercase tracking-tighter"
               title="Importa Backup"
             >
               <Upload size={12} /> IMPORT
               <input type="file" className="hidden" onChange={importState} accept=".json" />
             </label>
-            <button 
+            <button
               onClick={() => setShowHistoryModal(true)}
               className="px-2.5 py-2.5 bg-slate-800 text-slate-400 hover:text-sky-400 hover:bg-slate-700 transition rounded border border-slate-700 transition-all flex items-center justify-center"
               title="Storico Sistema"
@@ -609,7 +606,7 @@ export default function App() {
         {/* Header / Stats Bar */}
         <header className="h-20 bg-brand-bg border-b border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0">
           <div className="flex items-center gap-4">
-             <button 
+            <button
               onClick={() => setIsSidebarOpen(true)}
               className="p-2 text-slate-400 hover:text-white bg-slate-800/50 rounded-lg border border-slate-700"
             >
@@ -630,7 +627,7 @@ export default function App() {
               )}
             </div>
           </div>
-          
+
           {currentSession && (
             <div className="flex items-center gap-4 lg:gap-8">
               <div className="text-right hidden sm:block">
@@ -658,8 +655,8 @@ export default function App() {
             >
               {activeTab === 'dashboard' && (
                 currentSession ? (
-                  <Dashboard 
-                    currentSession={currentSession} 
+                  <Dashboard
+                    currentSession={currentSession}
                     sessions={sessions}
                     onUpdateStatus={handleUpdateSessionById}
                     onNavigate={handleSwitchSession}
@@ -675,7 +672,7 @@ export default function App() {
                         Inizia creando la tua prima gara o importando un backup.
                       </p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setActiveTab('contests')}
                       className="bg-sky-600 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-sky-900/20 hover:bg-sky-500 transition-all flex items-center gap-3"
                     >
@@ -684,9 +681,9 @@ export default function App() {
                   </div>
                 )
               )}
-               {activeTab === 'shooters' && (
-                 <ShooterRegistry shooters={shooters} onUpdate={setShooters} sessions={sessions} tournaments={tournaments} />
-               )}
+              {activeTab === 'shooters' && (
+                <ShooterRegistry shooters={shooters} onUpdate={setShooters} sessions={sessions} tournaments={tournaments} />
+              )}
               {activeTab === 'tournaments' && (
                 <TournamentView
                   tournaments={tournaments}
@@ -697,7 +694,7 @@ export default function App() {
               )}
               {activeTab === 'contests' && (
                 selectedSessionId ? (
-                  <ContestDetail 
+                  <ContestDetail
                     key={selectedSessionId}
                     session={sessions.find(s => s.id === selectedSessionId)!}
                     shooters={shooters}
@@ -709,7 +706,7 @@ export default function App() {
                     onBack={() => setSelectedSessionId(null)}
                   />
                 ) : (
-                  <ContestManager 
+                  <ContestManager
                     tournaments={tournaments}
                     sessions={sessions}
                     onSelect={handleSwitchSession}
@@ -729,7 +726,7 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl shrink-0">
                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Versione App</span>
-                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v1.0.0 (Stabile)</span>
+                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v0.0.4 (Beta)</span>
                     </div>
                   </div>
 
@@ -784,7 +781,7 @@ export default function App() {
                     {/* Sviluppatore Card */}
                     <div className="bg-card-bg border border-slate-800 rounded-3xl p-6 flex flex-col justify-between space-y-6 shadow-xl relative overflow-hidden">
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-amber-500/5 rounded-full blur-[60px] pointer-events-none"></div>
-                      
+
                       <div className="space-y-6 relative z-10">
                         <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
                           <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-500">
@@ -800,7 +797,7 @@ export default function App() {
                             </div>
                             <div>
                               <h4 className="text-sm font-black text-white uppercase tracking-tight">Giuseppe Antonino Cotroneo</h4>
-                              <button 
+                              <button
                                 onClick={() => api.openExternal('https://github.com/Cotrox')}
                                 className="text-[10px] text-amber-400 font-bold hover:text-amber-300 uppercase tracking-widest flex items-center gap-1 mx-auto transition-colors"
                               >
@@ -830,13 +827,13 @@ export default function App() {
                             <Coffee size={16} className="animate-bounce" />
                             <span className="text-[10px] font-black uppercase tracking-wider">Offri un Caffè</span>
                           </button>
-                          
+
                           <button
                             onClick={() => api.openExternal('https://www.paypal.com/paypalme/peppecotro')}
                             className="bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-bold py-3.5 px-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 cursor-pointer"
                           >
                             <svg className="w-4 h-4 fill-current text-white shrink-0" viewBox="0 0 16 16">
-                              <path d="M14.06 3.713c.12-1.071-.093-1.832-.702-2.526C12.628.356 11.312 0 9.626 0H4.734a.7.7 0 0 0-.691.59L2.005 13.509a.42.42 0 0 0 .415.486h2.756l-.202 1.28a.628.628 0 0 0 .62.726H8.14c.429 0 .793-.31.862-.731l.025-.13.48-3.043.03-.164.001-.007a.35.35 0 0 1 .348-.297h.38c1.266 0 2.425-.256 3.345-.91q.57-.403.993-1.005a4.94 4.94 0 0 0 .88-2.195c.242-1.246.13-2.356-.57-3.154a2.7 2.7 0 0 0-.76-.59l-.094-.061ZM6.543 8.82a.7.7 0 0 1 .321-.079H8.3c2.82 0 5.027-1.144 5.672-4.456l.003-.016q.326.186.548.438c.546.623.679 1.535.45 2.71-.272 1.397-.866 2.307-1.663 2.874-.802.57-1.842.815-3.043.815h-.38a.87.87 0 0 0-.863.734l-.03.164-.48 3.043-.024.13-.001.004a.35.35 0 0 1-.348.296H5.595a.106.106 0 0 1-.105-.123l.208-1.32z"/>
+                              <path d="M14.06 3.713c.12-1.071-.093-1.832-.702-2.526C12.628.356 11.312 0 9.626 0H4.734a.7.7 0 0 0-.691.59L2.005 13.509a.42.42 0 0 0 .415.486h2.756l-.202 1.28a.628.628 0 0 0 .62.726H8.14c.429 0 .793-.31.862-.731l.025-.13.48-3.043.03-.164.001-.007a.35.35 0 0 1 .348-.297h.38c1.266 0 2.425-.256 3.345-.91q.57-.403.993-1.005a4.94 4.94 0 0 0 .88-2.195c.242-1.246.13-2.356-.57-3.154a2.7 2.7 0 0 0-.76-.59l-.094-.061ZM6.543 8.82a.7.7 0 0 1 .321-.079H8.3c2.82 0 5.027-1.144 5.672-4.456l.003-.016q.326.186.548.438c.546.623.679 1.535.45 2.71-.272 1.397-.866 2.307-1.663 2.874-.802.57-1.842.815-3.043.815h-.38a.87.87 0 0 0-.863.734l-.03.164-.48 3.043-.024.13-.001.004a.35.35 0 0 1-.348.296H5.595a.106.106 0 0 1-.105-.123l.208-1.32z" />
                             </svg>
                             <span className="text-[10px] font-black uppercase tracking-wider">PayPal</span>
                           </button>
@@ -876,11 +873,10 @@ export default function App() {
                         <div className="grid grid-cols-3 gap-4">
                           <button
                             onClick={() => setTheme('light')}
-                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${
-                              theme === 'light'
-                              ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
-                              : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
-                            }`}
+                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${theme === 'light'
+                                ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
+                                : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
+                              }`}
                           >
                             <Sun size={28} />
                             <span className="text-[10px] font-black uppercase tracking-wider font-bold">Chiaro</span>
@@ -888,11 +884,10 @@ export default function App() {
 
                           <button
                             onClick={() => setTheme('dark')}
-                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${
-                              theme === 'dark'
-                              ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
-                              : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
-                            }`}
+                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${theme === 'dark'
+                                ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
+                                : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
+                              }`}
                           >
                             <Moon size={28} />
                             <span className="text-[10px] font-black uppercase tracking-wider font-bold">Scuro</span>
@@ -900,11 +895,10 @@ export default function App() {
 
                           <button
                             onClick={() => setTheme('auto')}
-                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${
-                              theme === 'auto'
-                              ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
-                              : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
-                            }`}
+                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${theme === 'auto'
+                                ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
+                                : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
+                              }`}
                           >
                             <Monitor size={28} />
                             <span className="text-[10px] font-black uppercase tracking-wider font-bold">Automatico</span>
@@ -956,7 +950,7 @@ export default function App() {
         {/* Console Footer */}
         <footer className="h-10 bg-slate-900 border-t border-slate-800 px-6 flex items-center justify-between shrink-0">
           <div className="flex gap-6 text-[9px] text-slate-500 font-bold uppercase tracking-widest">
-            <span 
+            <span
               onClick={() => {
                 setActiveTab('info');
                 setSelectedSessionId(null);
@@ -966,13 +960,13 @@ export default function App() {
             >
               [F1] AIUTO
             </span>
-            <span 
+            <span
               onClick={exportState}
               className="hover:text-slate-300 cursor-pointer transition-colors"
             >
               [F2] SALVA JSON
             </span>
-            <span 
+            <span
               onClick={() => {
                 toast.info('Ricaricamento dell\'applicazione...');
                 setTimeout(() => {
@@ -1005,7 +999,7 @@ export default function App() {
                   <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Backup automatici all'accesso</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => { setShowHistoryModal(false); setRollbackConfirmIdx(null); }}
                 className="p-2 text-slate-500 hover:text-white transition bg-slate-800 rounded-lg hover:bg-slate-700"
               >
@@ -1021,27 +1015,27 @@ export default function App() {
                       <History size={24} />
                     </div>
                     <div className="text-center space-y-2">
-                       <h4 className="text-sm font-black text-white uppercase tracking-widest">Conferma Ripristino</h4>
-                       <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
-                         Stai per ripristinare il sistema alla versione del <br/>
-                         <span className="text-amber-500 font-black">
-                           {new Date(systemHistory[rollbackConfirmIdx].timestamp).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                         </span>
-                       </p>
-                       <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                         Tutti i dati correnti (tiratori, gare, tornei) verranno sovrascritti e non sarà possibile annullare l'operazione.
-                       </p>
+                      <h4 className="text-sm font-black text-white uppercase tracking-widest">Conferma Ripristino</h4>
+                      <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                        Stai per ripristinare il sistema alla versione del <br />
+                        <span className="text-amber-500 font-black">
+                          {new Date(systemHistory[rollbackConfirmIdx].timestamp).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </p>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                        Tutti i dati correnti (tiratori, gare, tornei) verranno sovrascritti e non sarà possibile annullare l'operazione.
+                      </p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3">
-                    <button 
+                    <button
                       onClick={() => setRollbackConfirmIdx(null)}
                       className="py-4 bg-slate-800 text-slate-300 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700"
                     >
                       Annulla
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         handleRollbackSystem(rollbackConfirmIdx);
                         setShowHistoryModal(false);
@@ -1065,7 +1059,7 @@ export default function App() {
                   ) : (
                     <div className="space-y-3">
                       {systemHistory.map((h, idx) => (
-                        <div 
+                        <div
                           key={idx}
                           className="group flex items-center justify-between p-4 bg-slate-800/40 border border-slate-700/50 rounded-2xl hover:border-sky-500/50 hover:bg-sky-500/5 transition-all"
                         >
@@ -1092,7 +1086,7 @@ export default function App() {
                       ))}
                     </div>
                   )}
-                  
+
                   <div className="bg-sky-500/5 border border-sky-500/10 p-4 rounded-xl">
                     <p className="text-[9px] text-sky-500/80 font-medium leading-relaxed italic">
                       * Il sistema salva automaticamente uno stato completo ad ogni primo accesso della sessione browser.
@@ -1101,9 +1095,9 @@ export default function App() {
                 </div>
               )}
             </div>
-            
+
             <div className="p-6 bg-slate-950/30 border-t border-slate-800">
-               <button 
+              <button
                 onClick={() => { setShowHistoryModal(false); setRollbackConfirmIdx(null); }}
                 className="w-full py-3 bg-slate-800 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 hover:text-white transition-all"
               >
