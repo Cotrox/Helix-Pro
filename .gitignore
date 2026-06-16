@@ -22,6 +22,7 @@ desktop.ini
 start_log.txt
 
 # File Guida
+.tools/
 FUTURE_TIPS.md
 COMMANDS.md
 
