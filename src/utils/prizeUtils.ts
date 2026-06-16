@@ -135,27 +135,67 @@ export const calculatePrizeAssignments = (
         const catPrizes = prizes.filter(p => p.category === cat).sort((a, b) => a.position - b.position);
         const catEligible = rankedData.filter(item => item.shooter.category === cat);
 
-        // Individual Scorrimento Simulation
-        // We evaluate shooters one-by-one to decide if they stay in the category pool or slide out.
+        // Group consecutive tied shooters (same score and spareggio)
+        // catEligible is already sorted, so we can group consecutive items.
+        const tiedGroups: (typeof catEligible)[] = [];
+        let currentGroup: typeof catEligible = [];
+
+        for (const item of catEligible) {
+            if (currentGroup.length === 0) {
+                currentGroup.push(item);
+            } else {
+                const prev = currentGroup[currentGroup.length - 1];
+                const isTied = isManual
+                    ? (prev.registration.manualRank ?? 99999) === (item.registration.manualRank ?? 99999)
+                    : (prev.total ?? 0) === (item.total ?? 0) && (prev.spareggio || 0) === (item.spareggio || 0);
+
+                if (isTied) {
+                    currentGroup.push(item);
+                } else {
+                    tiedGroups.push(currentGroup);
+                    currentGroup = [item];
+                }
+            }
+        }
+        if (currentGroup.length > 0) {
+            tiedGroups.push(currentGroup);
+        }
+
+        // Group-based Scorrimento Simulation
+        // We evaluate tied groups together to decide who stays in the category pool or slides out.
         let currentPoolForEvaluation = [...catEligible];
         const finalStayList: typeof catEligible = [];
 
-        for (const item of catEligible) {
-            // What would THIS shooter get in the category if they stay?
+        for (const group of tiedGroups) {
+            // Calculate theoretical assignments for the current evaluation pool
             const tentativeResults = getAssignments(catPrizes, currentPoolForEvaluation);
-            const myAssignment = tentativeResults.find(r => r.winner.id === item.shooter.id);
 
-            const qeReservedTheoretical = myAssignment ? myAssignment.prizeValue : 0;
-            const qeAbsolute = absoluteWinnersMap.get(item.shooter.id) || 0;
+            const shootersToKeep: typeof catEligible = [];
+            const shootersToSlideOut: typeof catEligible = [];
 
-            // Rule: Stay if they win nothing in program, or if category prize is better than program prize
-            const shouldStay = qeAbsolute === 0 || qeAbsolute < qeReservedTheoretical;
+            for (const item of group) {
+                const myAssignment = tentativeResults.find(r => r.winner.id === item.shooter.id);
+                const qeReservedTheoretical = myAssignment ? myAssignment.prizeValue : 0;
+                const qeAbsolute = absoluteWinnersMap.get(item.shooter.id) || 0;
 
-            if (shouldStay) {
-                finalStayList.push(item);
-            } else {
-                // SLIDE OUT: Remover from evaluation pool so those below move UP
-                currentPoolForEvaluation = currentPoolForEvaluation.filter(s => s.shooter.id !== item.shooter.id);
+                // Rule: Stay if they win nothing in program, or if category prize is better than program prize
+                const shouldStay = qeAbsolute === 0 || qeAbsolute < qeReservedTheoretical;
+
+                if (shouldStay) {
+                    shootersToKeep.push(item);
+                } else {
+                    shootersToSlideOut.push(item);
+                }
+            }
+
+            finalStayList.push(...shootersToKeep);
+
+            // Remove any slid-out shooters from the evaluation pool for subsequent groups
+            if (shootersToSlideOut.length > 0) {
+                const slideOutIds = new Set(shootersToSlideOut.map(s => s.shooter.id));
+                currentPoolForEvaluation = currentPoolForEvaluation.filter(
+                    s => !slideOutIds.has(s.shooter.id)
+                );
             }
         }
 
