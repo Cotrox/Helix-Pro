@@ -163,6 +163,30 @@ export const calculatePrizeAssignments = (
         results.push(...realCatAssignments);
     });
 
+  // Art. 4 - Integrazione del Premio di Programma
+  // Calcoliamo la somma dei premi assoluti/programma vinti da ciascun tiratore
+  const winnersAbsoluteVals = new Map<string, number>();
+  results.forEach(res => {
+    const isAbsolute = res.prize.category === 'Assoluto' || res.prize.category === 'Generale';
+    if (isAbsolute) {
+      winnersAbsoluteVals.set(res.winner.id, (winnersAbsoluteVals.get(res.winner.id) || 0) + (res.prizeValue || 0));
+    }
+  });
+
+  // Se un tiratore ha vinto sia un premio assoluto che uno di categoria, applichiamo l'integrazione
+  results.forEach(res => {
+    const isAbsolute = res.prize.category === 'Assoluto' || res.prize.category === 'Generale';
+    if (!isAbsolute) {
+      const valAbsolute = winnersAbsoluteVals.get(res.winner.id) || 0;
+      if (valAbsolute > 0) {
+        const valCategory = res.prizeValue || 0;
+        // L'integrazione è il valore necessario per raggiungere il premio di categoria
+        const integration = Math.max(0, valCategory - valAbsolute);
+        res.prizeValue = integration;
+      }
+    }
+  });
+
   // 5. Finalize with Reintegro calcs
   const processedReintegro = new Set<string>();
 

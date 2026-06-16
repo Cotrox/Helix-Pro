@@ -322,3 +322,73 @@ export const exportFeedbackToPDF = (feedbacks: Feedback[]) => {
   
   doc.save("elenco_feedback.pdf");
 };
+
+export const exportFitavRegulationsPDF = (regulations: any[]) => {
+  const doc = new jsPDF();
+  
+  // Header / Title Page
+  doc.setFontSize(22);
+  doc.setTextColor(41, 128, 185); // Blue
+  doc.setFont('helvetica', 'bold');
+  doc.text("REGOLAMENTO FEDERALE FITAV", 14, 25);
+  
+  doc.setFontSize(12);
+  doc.setTextColor(100);
+  doc.setFont('helvetica', 'normal');
+  doc.text("Sintesi delle Normative, Codici Etici e Tutela dello Sport", 14, 33);
+  
+  doc.setFontSize(9);
+  doc.setTextColor(150);
+  doc.text(`Documento generato da HeliX Pro il: ${new Date().toLocaleDateString('it-IT')}`, 14, 40);
+  doc.text("Sito Ufficiale FITAV: https://www.fitav.it/documenti/statuto-e-regolamenti/", 14, 45);
+  
+  // Description Paragraph
+  doc.setFontSize(10);
+  doc.setTextColor(80);
+  const descText = "Questa raccolta contiene la sintesi dei principali regolamenti adottati dalla Federazione Italiana Tiro a Volo (FITAV). La conoscenza di tali norme è fondamentale per atleti, tecnici e dirigenti sportivi per garantire il corretto svolgimento delle competizioni e la conformità alle direttive federali e del CONI.";
+  const splitDesc = doc.splitTextToSize(descText, 182);
+  doc.text(splitDesc, 14, 54);
+  
+  // Line separator
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.5);
+  doc.line(14, 70, 196, 70);
+  
+  let currentY = 80;
+  
+  regulations.forEach((reg, index) => {
+    // Check if we need a new page
+    if (currentY > 240) {
+      doc.addPage();
+      currentY = 25;
+    }
+    
+    // Section Title
+    doc.setFontSize(13);
+    doc.setTextColor(41, 128, 185);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${index + 1}. ${reg.title}`, 14, currentY);
+    currentY += 6;
+    
+    // Subtitle
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.setFont('helvetica', 'italic');
+    doc.text(reg.subtitle, 14, currentY);
+    currentY += 7;
+    
+    // Content Paragraphs
+    doc.setFontSize(9.5);
+    doc.setTextColor(60);
+    doc.setFont('helvetica', 'normal');
+    
+    const splitContent = doc.splitTextToSize(reg.content, 182);
+    doc.text(splitContent, 14, currentY);
+    
+    const linesCount = splitContent.length;
+    currentY += (linesCount * 5) + 12; // Update position for next section
+  });
+  
+  doc.save("Regolamento_FITAV_HelixPro.pdf");
+};
+

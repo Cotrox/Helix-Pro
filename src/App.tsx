@@ -27,12 +27,19 @@ import {
   Moon,
   Monitor,
   BookOpen,
-  ExternalLink
+  ExternalLink,
+  Scale,
+  ShieldCheck,
+  FileText,
+  HeartPulse,
+  Award,
+  Landmark
 } from 'lucide-react';
 
 import { Shooter, Session, CompetitionSettings, CATEGORIES, Tournament, Feedback } from './types';
 import { api } from './services/api';
 import { downloadFile, STORAGE_KEYS } from './services/storageService';
+import { exportFitavRegulationsPDF } from './services/pdfService';
 
 import Dashboard from './components/Dashboard';
 import ShooterRegistry from './components/ShooterRegistry';
@@ -75,6 +82,65 @@ const createNewSession = (settings: CompetitionSettings = INITIAL_SETTINGS): Ses
   createdAt: new Date().toISOString()
 });
 
+const FITAV_REGULATIONS = [
+  {
+    id: 'statuto',
+    title: 'Statuto Federale FITAV',
+    subtitle: 'Deliberazione G.N. n. 307 del 11/07/2024',
+    content: 'Lo Statuto stabilisce che la FITAV (Federazione Italiana Tiro a Volo) è l\'unico organo riconosciuto dal CONI per la gestione e l\'organizzazione dello sport del tiro a volo in Italia. Disciplina i criteri di affiliazione delle Associazioni Sportive Dilettantistiche (ASD), i requisiti di tesseramento degli atleti, i diritti e doveri dei tesserati, e definisce l\'organizzazione interna della federazione a livello centrale e regionale.',
+    icon: BookOpen
+  },
+  {
+    id: 'settore-arbitrale',
+    title: 'Regolamento del Settore Arbitrale',
+    subtitle: 'Organizzazione e doveri del corpo arbitrale',
+    content: 'Questo regolamento disciplina l\'attività dei Direttori di Tiro (DdT), che vigilano sul rispetto delle regole tecniche durante le gare. Regola la classificazione degli arbitri (Provinciali, Regionali, Nazionali, Internazionali), le modalità di designazione, i compiti sul campo da tiro, la gestione dei reclami degli atleti e il codice disciplinare interno del settore arbitrale.',
+    icon: Award
+  },
+  {
+    id: 'sanitario',
+    title: 'Regolamento Sanitario FITAV',
+    subtitle: 'Tutela della salute e idoneità agonistica',
+    content: 'Regola i requisiti medico-sportivi per la pratica del tiro a volo. Stabilisce l\'obbligatorietà del certificato medico di idoneità specifica allo sport agonistico per la partecipazione alle gare federali. Regola inoltre le procedure di controllo antidoping in conformità con le linee guida NADO Italia e WADA, e la gestione delle esenzioni a fini terapeutici (TUE).',
+    icon: HeartPulse
+  },
+  {
+    id: 'safeguarding',
+    title: 'Regolamento Safeguarding & Tutela Minori',
+    subtitle: 'Prevenzione di abusi, violenze e molestie nello sport',
+    content: 'In conformità con le direttive del CONI, questo regolamento stabilisce le linee guida per prevenire e contrastare ogni forma di abuso, violenza o molestia (fisica, psicologica o verbale) all\'interno delle associazioni sportive. Obbliga ogni ASD all\'adozione di un Codice di Condotta per la tutela dei minori e alla nomina di un Responsabile Safeguarding sociale.',
+    icon: ShieldCheck
+  },
+  {
+    id: 'comportamento',
+    title: 'Codice di Comportamento Sportivo',
+    subtitle: 'Principi di lealtà, correttezza e probità',
+    content: 'Fissa i principi etici fondamentali che devono guidare la condotta di tutti i tesserati FITAV (atleti, tecnici, dirigenti). Richiede il massimo rispetto per gli avversari, i giudici di gara e gli spettatori. Vieta qualsiasi forma di alterazione dei risultati delle competizioni (combattività e scommesse) e promuove uno sport sano e inclusivo.',
+    icon: FileText
+  },
+  {
+    id: 'giustizia',
+    title: 'Regolamento di Giustizia Sportiva',
+    subtitle: 'Organi giudiziari e sanzioni federali',
+    content: 'Disciplina il sistema giudiziario federale preposto a sanzionare le violazioni dei regolamenti. Identifica i soggetti responsabili (Procura Federale, Tribunale Federale, Corte Federale d\'Appello) e definisce il catalogo delle sanzioni (ammonizioni, multe, squalifiche temporanee, radiazione) e le modalità di ricorso per i tesserati.',
+    icon: Scale
+  },
+  {
+    id: 'tiratore-azzurro',
+    title: 'Regolamento del Tiratore Azzurro',
+    subtitle: 'Norme per la rappresentativa nazionale',
+    content: 'Disciplina lo status e il codice di condotta degli atleti selezionati per rappresentare l\'Italia nelle competizioni internazionali. Stabilisce gli obblighi d\'uso delle divise ufficiali, i comportamenti da tenere nei raduni, i criteri meritocratici di convocazione e le sanzioni specifiche in caso di violazione dell\'onore della maglia azzurra.',
+    icon: Trophy
+  },
+  {
+    id: 'montepremi',
+    title: 'Assegnazione Montepremi FITAV',
+    subtitle: 'Regolamento per l\'assegnazione e la suddivisione del montepremi',
+    content: 'Disciplina la ripartizione dei premi di gara. Art. 1 (Premi di Programma): assegnati in base alle eliche colpite; in caso di parità, i premi sono sommati e divisi equamente (senza spareggi). Art. 2 (Premi Riservati): assegnati alle categorie specifiche; i pari merito dividono il fondo riservato. Art. 3 (Cumulo): i premi di programma e riservati sono cumulabili. Art. 4 (Integrazione): se il premio di programma di un tiratore è inferiore al premio riservato spettante, il premio di programma viene integrato fino al valore del premio riservato attingendo dal fondo di categoria. Art. 5 (Non Assegnati): i premi di categorie senza partecipanti sufficienti vengono redistribuiti o trasferiti al montepremi generale. Art. 6: si applicano le norme FITAV vigenti.',
+    icon: Landmark
+  }
+];
+
 export default function App() {
   const [shooters, setShooters] = useState<Shooter[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -87,6 +153,7 @@ export default function App() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showFitavModal, setShowFitavModal] = useState(false);
   const [rollbackConfirmIdx, setRollbackConfirmIdx] = useState<number | null>(null);
 
   // Derived state
@@ -528,8 +595,8 @@ export default function App() {
                 setIsSidebarOpen(false);
               }}
               className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
-                  ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
+                ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
                 }`}
             >
               <tab.icon size={16} className={activeTab === tab.id ? 'text-sky-400' : 'text-slate-500'} />
@@ -548,8 +615,8 @@ export default function App() {
                 setIsSidebarOpen(false);
               }}
               className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'info'
-                  ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
+                ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
                 }`}
             >
               <Info size={16} className={activeTab === 'info' ? 'text-sky-400' : 'text-slate-500'} />
@@ -562,8 +629,8 @@ export default function App() {
                 setIsSidebarOpen(false);
               }}
               className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'settings'
-                  ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
+                ? 'bg-sky-600/20 text-sky-400 border border-sky-500/20 shadow-sm'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
                 }`}
             >
               <SettingsIcon size={16} className={activeTab === 'settings' ? 'text-sky-400' : 'text-slate-500'} />
@@ -726,18 +793,27 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl shrink-0">
                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Versione App</span>
-                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v0.0.4 (Beta)</span>
+                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v0.0.6 (Beta)</span>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Guida all'uso Card */}
                     <div className="lg:col-span-2 bg-card-bg border border-slate-800 rounded-3xl p-6 lg:p-8 space-y-6 shadow-xl">
-                      <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-                        <div className="w-10 h-10 bg-sky-500/10 rounded-xl flex items-center justify-center text-sky-400">
-                          <BookOpen size={20} />
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-sky-500/10 rounded-xl flex items-center justify-center text-sky-400">
+                            <BookOpen size={20} />
+                          </div>
+                          <h3 className="text-lg font-bold text-white tracking-tight uppercase italic">Guida all'uso di Helix Pro</h3>
                         </div>
-                        <h3 className="text-lg font-bold text-white tracking-tight uppercase italic">Guida all'uso di Helix Pro</h3>
+                        <button
+                          onClick={() => setShowFitavModal(true)}
+                          className="bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-95 cursor-pointer text-xs uppercase tracking-wider"
+                        >
+                          <Scale size={14} />
+                          <span>FITAV</span>
+                        </button>
                       </div>
 
                       <div className="space-y-6 overflow-y-auto max-h-[50vh] high-density-scroll pr-2">
@@ -874,8 +950,8 @@ export default function App() {
                           <button
                             onClick={() => setTheme('light')}
                             className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${theme === 'light'
-                                ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
-                                : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
+                              ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
+                              : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
                               }`}
                           >
                             <Sun size={28} />
@@ -885,8 +961,8 @@ export default function App() {
                           <button
                             onClick={() => setTheme('dark')}
                             className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${theme === 'dark'
-                                ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
-                                : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
+                              ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
+                              : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
                               }`}
                           >
                             <Moon size={28} />
@@ -896,8 +972,8 @@ export default function App() {
                           <button
                             onClick={() => setTheme('auto')}
                             className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${theme === 'auto'
-                                ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
-                                : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
+                              ? 'bg-sky-600/15 text-sky-400 border-sky-500 shadow-lg shadow-sky-500/5'
+                              : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-700'
                               }`}
                           >
                             <Monitor size={28} />
@@ -1100,6 +1176,95 @@ export default function App() {
               <button
                 onClick={() => { setShowHistoryModal(false); setRollbackConfirmIdx(null); }}
                 className="w-full py-3 bg-slate-800 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 hover:text-white transition-all"
+              >
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FITAV Regulations Modal */}
+      {showFitavModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-sky-500/10 rounded-xl flex items-center justify-center text-sky-500">
+                  <Scale size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Regolamento FITAV</h3>
+                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Raccolta e consultazione delle norme federali</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFitavModal(false)}
+                className="p-2 text-slate-500 hover:text-white transition bg-slate-800 rounded-lg hover:bg-slate-700 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 high-density-scroll pr-2">
+              {/* Introduction & Description */}
+              <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-2xl space-y-3">
+                <h4 className="text-xs font-bold text-sky-400 uppercase tracking-widest">Informazioni Generali</h4>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Questa sezione consente di consultare le normative, i codici etici e i regolamenti applicati dalla Federazione Italiana Tiro a Volo (FITAV). La conoscenza di questi regolamenti è fondamentale per la corretta gestione delle gare e l'affiliazione degli atleti.
+                </p>
+                <div className="pt-2 flex items-center justify-between border-t border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Sito Ufficiale FITAV</span>
+                  <button
+                    onClick={() => api.openExternal('https://www.fitav.it/documenti/statuto-e-regolamenti/')}
+                    className="text-[10px] text-sky-400 hover:text-sky-300 font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>fitav.it/statuto-e-regolamenti</span>
+                    <ExternalLink size={10} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Regulations List */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-800/80 pb-2">Regolamenti Federali</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {FITAV_REGULATIONS.map((reg) => {
+                    const Icon = reg.icon;
+                    return (
+                      <div
+                        key={reg.id}
+                        className="p-4 bg-slate-950/20 border border-slate-800 rounded-2xl hover:border-sky-500/20 hover:bg-sky-500/5 transition-all flex gap-3"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-400 shrink-0">
+                          <Icon size={16} />
+                        </div>
+                        <div className="space-y-1">
+                          <h5 className="text-xs font-bold text-slate-200 uppercase tracking-tight">{reg.title}</h5>
+                          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{reg.subtitle}</p>
+                          <p className="text-[10px] text-slate-400 leading-relaxed mt-1.5">{reg.content}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 bg-slate-950/30 border-t border-slate-800 flex flex-col sm:flex-row gap-3 shrink-0">
+              <button
+                onClick={() => exportFitavRegulationsPDF(FITAV_REGULATIONS)}
+                className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:text-white transition-all shadow-xl shadow-sky-950/50 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Download size={12} />
+                <span>Scarica Regolamento Completo</span>
+              </button>
+              <button
+                onClick={() => setShowFitavModal(false)}
+                className="w-full sm:flex-1 py-3 bg-slate-800 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 hover:text-white transition-all cursor-pointer"
               >
                 Chiudi
               </button>
