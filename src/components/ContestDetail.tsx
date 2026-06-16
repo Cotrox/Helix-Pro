@@ -92,7 +92,9 @@ export default function ContestDetail({
           registrations: importedData.registrations,
           scores: importedData.scores || [],
           barrages: importedData.barrages || [],
-          status: importedData.status || 'active'
+          status: importedData.status || 'active',
+          manualPrizes: importedData.manualPrizes || [],
+          reintegroOverrides: importedData.reintegroOverrides || {}
         });
 
         toast.success('Dati gara ripristinati con successo');

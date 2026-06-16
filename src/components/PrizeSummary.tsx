@@ -1,6 +1,6 @@
 import { RefreshCcw, Landmark, Download, Star, FileDown, Info, User, Trash2, Edit2, X, Check, AlertCircle, Award, Search, Filter } from 'lucide-react';
 import { Shooter, Registration, Score, CompetitionSettings, Tournament, CATEGORIES, ShooterCategory } from '../types';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { downloadFile } from '../services/storageService';
 import { exportFullReportToPDF } from '../services/pdfService';
 import { toast } from 'sonner';
@@ -34,6 +34,10 @@ export default function PrizeSummary({
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<ShooterCategory[]>([]);
+
+  useEffect(() => {
+    setEditingManualPrizes(manualPrizes || []);
+  }, [manualPrizes]);
 
   const assignedWinners = useMemo(() => {
     return calculatePrizeAssignments(shooters, registrations, scores, settings, tournaments, reintegroOverrides);
@@ -363,7 +367,10 @@ export default function PrizeSummary({
             ) : (
               <div className="flex gap-2 flex-1 sm:flex-none">
                 <button
-                  onClick={() => setShowManualModal(true)}
+                  onClick={() => {
+                    setEditingManualPrizes(manualPrizes || []);
+                    setShowManualModal(true);
+                  }}
                   className="flex-1 sm:flex-none justify-center flex items-center gap-2 bg-slate-800 text-slate-200 border border-slate-700 px-4 sm:px-6 py-2.5 rounded-lg hover:bg-slate-700 transition font-black text-[9px] sm:text-[10px] uppercase tracking-widest shadow-xl"
                 >
                   <Edit2 size={14} /> Modifica

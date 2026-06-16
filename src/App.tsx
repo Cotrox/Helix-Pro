@@ -33,7 +33,8 @@ import {
   FileText,
   HeartPulse,
   Award,
-  Landmark
+  Landmark,
+  AlertTriangle
 } from 'lucide-react';
 
 import { Shooter, Session, CompetitionSettings, CATEGORIES, Tournament, Feedback } from './types';
@@ -155,6 +156,10 @@ export default function App() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showFitavModal, setShowFitavModal] = useState(false);
   const [rollbackConfirmIdx, setRollbackConfirmIdx] = useState<number | null>(null);
+  const [showImportConfirmModal, setShowImportConfirmModal] = useState(false);
+  const [pendingImportData, setPendingImportData] = useState<any>(null);
+
+  const importFileInputRef = useRef<HTMLInputElement>(null);
 
   // Derived state
   const currentSession = React.useMemo(() =>
@@ -466,14 +471,16 @@ export default function App() {
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target?.result as string);
-        if (data.shooters) setShooters(data.shooters);
-        if (data.sessions) setSessions(data.sessions);
-        if (data.tournaments) setTournaments(data.tournaments);
-        if (data.feedbacks) setFeedbacks(data.feedbacks);
-        if (data.selectedSessionId) setSelectedSessionId(data.selectedSessionId);
-        toast.success('Dati importati con successo');
+        if (!data || typeof data !== 'object') {
+          throw new Error('Formato file non valido');
+        }
+        setPendingImportData(data);
+        setShowImportConfirmModal(true);
       } catch (err) {
-        toast.error('Errore nell\'importazione del file');
+        toast.error('Errore nell\'importazione del file: JSON non valido');
+      }
+      if (importFileInputRef.current) {
+        importFileInputRef.current.value = '';
       }
     };
     reader.readAsText(file);
@@ -655,7 +662,13 @@ export default function App() {
               title="Importa Backup"
             >
               <Upload size={12} /> IMPORT
-              <input type="file" className="hidden" onChange={importState} accept=".json" />
+              <input
+                type="file"
+                ref={importFileInputRef}
+                className="hidden"
+                onChange={importState}
+                accept=".json"
+              />
             </label>
             <button
               onClick={() => setShowHistoryModal(true)}
@@ -793,7 +806,7 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl shrink-0">
                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Versione App</span>
-                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v0.0.6 (Beta)</span>
+                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v0.0.8 (Beta)</span>
                     </div>
                   </div>
 
@@ -1268,6 +1281,105 @@ export default function App() {
               >
                 Chiudi
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Confirmation Modal */}
+      {showImportConfirmModal && pendingImportData && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center">
+                  <Upload className="text-amber-500" size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Conferma Importazione</h3>
+                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Sovrascrittura Configurazione Globale</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowImportConfirmModal(false); setPendingImportData(null); }}
+                className="p-2 text-slate-500 hover:text-white transition bg-slate-800 rounded-lg hover:bg-slate-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-2xl space-y-4">
+                <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center text-amber-500 mx-auto">
+                  <AlertTriangle size={24} />
+                </div>
+                <div className="text-center space-y-2">
+                  <h4 className="text-sm font-black text-white uppercase tracking-widest">Attenzione</h4>
+                  <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                    Stai per importare una nuova configurazione globale.
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                    Tutti i dati esistenti in anagrafica, gare e tornei verranno sovrascritti interamente con quelli del file selezionato.
+                  </p>
+                  <p className="text-[10px] text-amber-500/90 font-bold uppercase tracking-widest leading-relaxed">
+                    Eventualmente potrai recuperare i tuoi dati attuali sfruttando la funzione "Storico" del programma, in cui verrà salvato un backup automatico prima di procedere.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => { setShowImportConfirmModal(false); setPendingImportData(null); }}
+                  className="py-4 bg-slate-800 text-slate-300 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      // Prepend current state to systemHistory as a rollback snapshot
+                      const newSnapshot = {
+                        timestamp: new Date().toISOString(),
+                        shooters: JSON.parse(JSON.stringify(shooters)),
+                        sessions: JSON.parse(JSON.stringify(sessions)),
+                        tournaments: JSON.parse(JSON.stringify(tournaments))
+                      };
+                      setSystemHistory(prev => [newSnapshot, ...prev].slice(0, 3));
+                      
+                      // Write to DB immediately to avoid delay/timeouts/race conditions
+                      await Promise.all([
+                        api.saveShooters(pendingImportData.shooters || []),
+                        api.saveSessions(pendingImportData.sessions || []),
+                        api.saveTournaments(pendingImportData.tournaments || []),
+                        api.saveFeedbacks(pendingImportData.feedbacks || [])
+                      ]);
+                      
+                      // Update React state
+                      setShooters(pendingImportData.shooters || []);
+                      setSessions(pendingImportData.sessions || []);
+                      setTournaments(pendingImportData.tournaments || []);
+                      setFeedbacks(pendingImportData.feedbacks || []);
+                      if (pendingImportData.selectedSessionId) {
+                        setSelectedSessionId(pendingImportData.selectedSessionId);
+                      } else if (pendingImportData.sessions && pendingImportData.sessions.length > 0) {
+                        setSelectedSessionId(pendingImportData.sessions[0].id);
+                      } else {
+                        setSelectedSessionId(null);
+                      }
+                      
+                      toast.success('Dati importati con successo e backup storico creato');
+                    } catch (err) {
+                      toast.error('Errore durante il salvataggio dei dati importati');
+                    } finally {
+                      setShowImportConfirmModal(false);
+                      setPendingImportData(null);
+                    }
+                  }}
+                  className="py-4 bg-amber-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 transition-all shadow-xl shadow-amber-900/40"
+                >
+                  Sì, Importa e Sovrascrivi
+                </button>
+              </div>
             </div>
           </div>
         </div>
