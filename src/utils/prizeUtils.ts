@@ -51,9 +51,10 @@ export const calculatePrizeAssignments = (
   const isDivision = settings.drawResolution === 'd_ufficio';
   const results: any[] = [];
 
-  const getAssignments = (prizeList: any[], shooterList: any[]) => {
+  const getAssignments = (prizeList: any[], shooterList: any[], forceDivision: boolean = false) => {
     const localResults: any[] = [];
-    if (isDivision) {
+    const useDivision = isDivision || forceDivision;
+    if (useDivision) {
       // Group by score to handle ties together
       const scoreGroups: Map<number, any[]> = new Map();
       shooterList.forEach(item => {
@@ -127,81 +128,66 @@ export const calculatePrizeAssignments = (
     absoluteWinnersMap.set(a.winner.id, current + (a.prizeValue || 0));
   });
 
-    // 4. Assign Category specific
-    const categories = Array.from(new Set(prizes.map(p => p.category)))
-        .filter(c => (c as string) !== 'Assoluto' && (c as string) !== 'Generale');
+  // 4. Assign Category specific
+  const categories = Array.from(new Set(prizes.map(p => p.category)))
+      .filter(c => (c as string) !== 'Assoluto' && (c as string) !== 'Generale');
 
-    categories.forEach(cat => {
-        const catPrizes = prizes.filter(p => p.category === cat).sort((a, b) => a.position - b.position);
-        const catEligible = rankedData.filter(item => item.shooter.category === cat);
+  categories.forEach(cat => {
+      const catPrizes = prizes.filter(p => p.category === cat).sort((a, b) => a.position - b.position);
+      const catEligible = rankedData.filter(item => item.shooter.category === cat);
+      const r1 = catPrizes[0]?.value || 0;
 
-        // Group consecutive tied shooters (same score and spareggio)
-        // catEligible is already sorted, so we can group consecutive items.
-        const tiedGroups: (typeof catEligible)[] = [];
-        let currentGroup: typeof catEligible = [];
+      // Group consecutive tied shooters (same score)
+      // catEligible is already sorted, so we can group consecutive items.
+      const tiedGroups: (typeof catEligible)[] = [];
+      let currentGroup: typeof catEligible = [];
 
-        for (const item of catEligible) {
-            if (currentGroup.length === 0) {
-                currentGroup.push(item);
-            } else {
-                const prev = currentGroup[currentGroup.length - 1];
-                const isTied = isManual
-                    ? (prev.registration.manualRank ?? 99999) === (item.registration.manualRank ?? 99999)
-                    : (prev.total ?? 0) === (item.total ?? 0) && (prev.spareggio || 0) === (item.spareggio || 0);
+      for (const item of catEligible) {
+          if (currentGroup.length === 0) {
+              currentGroup.push(item);
+          } else {
+              const prev = currentGroup[currentGroup.length - 1];
+              const isTied = isManual
+                  ? (prev.registration.manualRank ?? 99999) === (item.registration.manualRank ?? 99999)
+                  : (prev.total ?? 0) === (item.total ?? 0);
 
-                if (isTied) {
-                    currentGroup.push(item);
-                } else {
-                    tiedGroups.push(currentGroup);
-                    currentGroup = [item];
-                }
-            }
-        }
-        if (currentGroup.length > 0) {
-            tiedGroups.push(currentGroup);
-        }
+              if (isTied) {
+                  currentGroup.push(item);
+              } else {
+                  tiedGroups.push(currentGroup);
+                  currentGroup = [item];
+              }
+          }
+      }
+      if (currentGroup.length > 0) {
+          tiedGroups.push(currentGroup);
+      }
 
-        // Group-based Scorrimento Simulation
-        // We evaluate tied groups together to decide who stays in the category pool or slides out.
-        let currentPoolForEvaluation = [...catEligible];
-        const finalStayList: typeof catEligible = [];
+      // Group-based Scorrimento Simulation
+      // We evaluate tied groups together to decide who stays in the category pool or slides out.
+      const finalStayList: typeof catEligible = [];
 
-        for (const group of tiedGroups) {
-            // Calculate theoretical assignments for the current evaluation pool
-            const tentativeResults = getAssignments(catPrizes, currentPoolForEvaluation);
+      for (const group of tiedGroups) {
+          const shootersToKeep: typeof catEligible = [];
 
-            const shootersToKeep: typeof catEligible = [];
-            const shootersToSlideOut: typeof catEligible = [];
+          for (const item of group) {
+              const qeAbsolute = absoluteWinnersMap.get(item.shooter.id) || 0;
 
-            for (const item of group) {
-                const myAssignment = tentativeResults.find(r => r.winner.id === item.shooter.id);
-                const qeReservedTheoretical = myAssignment ? myAssignment.prizeValue : 0;
-                const qeAbsolute = absoluteWinnersMap.get(item.shooter.id) || 0;
+              // Rule: Stay if they win nothing in program, or if the program prize is less than the 1st category prize (R1)
+              const shouldStay = qeAbsolute < r1;
 
-                // Rule: Stay if they win nothing in program, or if category prize is better than program prize
-                const shouldStay = qeAbsolute === 0 || qeAbsolute < qeReservedTheoretical;
+              if (shouldStay) {
+                  shootersToKeep.push(item);
+              }
+          }
 
-                if (shouldStay) {
-                    shootersToKeep.push(item);
-                } else {
-                    shootersToSlideOut.push(item);
-                }
-            }
+          finalStayList.push(...shootersToKeep);
+      }
 
-            finalStayList.push(...shootersToKeep);
-
-            // Remove any slid-out shooters from the evaluation pool for subsequent groups
-            if (shootersToSlideOut.length > 0) {
-                const slideOutIds = new Set(shootersToSlideOut.map(s => s.shooter.id));
-                currentPoolForEvaluation = currentPoolForEvaluation.filter(
-                    s => !slideOutIds.has(s.shooter.id)
-                );
-            }
-        }
-
-        const realCatAssignments = getAssignments(catPrizes, finalStayList);
-        results.push(...realCatAssignments);
-    });
+      // Force division for real category assignments
+      const realCatAssignments = getAssignments(catPrizes, finalStayList, true);
+      results.push(...realCatAssignments);
+  });
 
   // Art. 4 - Integrazione del Premio di Programma
   // Calcoliamo la somma dei premi assoluti/programma vinti da ciascun tiratore
@@ -219,57 +205,40 @@ export const calculatePrizeAssignments = (
     if (!isAbsolute) {
       const valAbsolute = winnersAbsoluteVals.get(res.winner.id) || 0;
       if (valAbsolute > 0) {
-        const valCategory = res.prizeValue || 0;
-        // L'integrazione è il valore necessario per raggiungere il premio di categoria
-        const integration = Math.max(0, valCategory - valAbsolute);
+        // Find the 1st reserved prize value for this category
+        const catPrizes = prizes.filter(p => p.category === res.prize.category).sort((a, b) => a.position - b.position);
+        const r1 = catPrizes[0]?.value || 0;
+        
+        // L'integrazione è il valore necessario per raggiungere il 1° premio riservato
+        const integration = Math.max(0, r1 - valAbsolute);
         res.prizeValue = integration;
       }
     }
   });
 
   // 5. Finalize with Reintegro calcs
-  const processedReintegro = new Set<string>();
+  // Track remaining reintegro for each shooter to correctly distribute it across multiple prizes won
+  const remainingReintegroMap = new Map<string, number>();
+  
+  // Initialize remainingReintegroMap for all registered shooters
+  registrations.forEach(reg => {
+    const isReintegroManuallyDisabled = reintegroOverrides[reg.shooterId] === false;
+    const totalPossibleReintegro = reg.reintegroAmount ?? 0;
+    if (!isReintegroManuallyDisabled && totalPossibleReintegro > 0) {
+      remainingReintegroMap.set(reg.shooterId, totalPossibleReintegro);
+    }
+  });
 
   return results.map(res => {
-    const reg = registrations.find(r => r.shooterId === res.winner.id);
-    const isAbsolute = res.prize.category === 'Assoluto' || res.prize.category === 'Generale';
-    
-    // Logic for reintegro amount from Registration
-    // We trust reg.reintegroAmount as the source of truth calculated during registration
-    const totalPossibleReintegro = reg?.reintegroAmount ?? 0;
-    // 1. Only once per shooter (processedReintegro)
-    // 2. Only if NOT manually disabled via reintegroOverrides (default is usually ENABLED if override not present)
-    // 3. Prefer applying it to Absolute prize if they win both
-    
     let reintegroAmount = 0;
-    // By default, if there is a potential reintegro, it's ENABLED unless specifically set to false in overrides
-    const isReintegroManuallyDisabled = reintegroOverrides[res.winner.id] === false;
+    const remainingReintegro = remainingReintegroMap.get(res.winner.id) || 0;
+    const prizeValue = res.prizeValue !== undefined ? res.prizeValue : res.prize.value;
 
-    // We process the list sequentially. results already has absoluteAssignments first.
-    if (!isReintegroManuallyDisabled && totalPossibleReintegro > 0 && !processedReintegro.has(res.winner.id)) {
-       // If this is a category prize but they ALSO have an absolute prize, we should skip it here 
-       // and wait for the absolute one. But wait, absolute ones are ALREADY at the beginning of the list.
-       // So if we are here and it's NOT absolute, it means either:
-       // a) They don't win absolute prize -> Apply here.
-       // b) They win both -> This category assignment would be LATER in the list, so it will already be in processedReintegro.
-       
-       // EXCEPT if we want to honor "ONLY on program prize" even if it doesn't cover the whole thing.
-       // If they win both, we apply it to Absolute.
-       // If they only win Category, we apply it to Category.
-       
-       const winsAbsolute = absoluteWinnersMap.has(res.winner.id);
-       
-       if (isAbsolute || !winsAbsolute) {
-         reintegroAmount = totalPossibleReintegro;
-         processedReintegro.add(res.winner.id);
-       }
+    if (remainingReintegro > 0) {
+      reintegroAmount = Math.min(prizeValue, remainingReintegro);
+      remainingReintegroMap.set(res.winner.id, remainingReintegro - reintegroAmount);
     }
     
-    const prizeValue = res.prizeValue !== undefined ? res.prizeValue : res.prize.value;
-    
-    // If it's the absolute prize and they have both, we cover as much as possible BUT "solo sul premio di programma"
-    // might mean if it exceeds, we don't take from the other.
-    // My mapping below ensures reintegro is subtracted from THIS specific prize.
     const finalAmount = prizeValue - reintegroAmount;
 
     return {
