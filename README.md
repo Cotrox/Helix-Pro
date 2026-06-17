@@ -43,9 +43,11 @@ I dati dell'app (tiratori, gare, tornei) sono salvati localmente per garantire i
 
 ## 💻 Installazione e Sviluppo
 
-Se sei un utente finale, scarica l'ultimo installer disponibile nella sezione **[Releases](../../releases)** di questa repository:
-*   **Installer Setup (`.exe`):** Installa l'app nel sistema creandone le scorciatoie nel menu Start e sul Desktop.
-*   **Versione Portable (`.exe`):** Eseguibile autonomo pronto all'uso, ideale per essere avviato da una chiavetta USB senza installazione.
+Se sei un utente finale, puoi installare l'applicazione nei seguenti modi:
+
+*   [**Microsoft Store**](https://apps.microsoft.com/detail/9nd6g4p0hg6h?hl=neutral&gl=IT&ocid=pdpshare): Scaricabile dallo store ufficiale Microsoft. Questa è l'unica versione a supportare gli aggiornamenti automatici a ogni rilascio.
+*   **Installer Setup (`.exe`):** Scaricabile dalla sezione **[Releases](../../releases)** di questa repository. Installa l'app nel sistema creandone le scorciatoie nel menu Start e sul Desktop.
+*   **Versione Portable (`.exe`):** Scaricabile dalla sezione **[Releases](../../releases)** di questa repository. Eseguibile autonomo pronto all'uso, ideale per essere avviato da una chiavetta USB senza installazione.
 
 ---
 
