@@ -134,15 +134,22 @@ export const calculatePrizeAssignments = (
 
   categories.forEach(cat => {
       const catPrizes = prizes.filter(p => p.category === cat).sort((a, b) => a.position - b.position);
+      if (catPrizes.length === 0) return;
+
       const catEligible = rankedData.filter(item => item.shooter.category === cat);
       const r1 = catPrizes[0]?.value || 0;
 
-      // Group consecutive tied shooters (same score)
-      // catEligible is already sorted, so we can group consecutive items.
-      const tiedGroups: (typeof catEligible)[] = [];
-      let currentGroup: typeof catEligible = [];
+      // Filter out shooters who won an absolute prize >= r1 (first category prize value)
+      const eligibleGroup = catEligible.filter(item => {
+        const pProg = absoluteWinnersMap.get(item.shooter.id) || 0;
+        return pProg < r1;
+      });
 
-      for (const item of catEligible) {
+      // Group consecutive tied shooters (same score)
+      const tiedGroups: (typeof eligibleGroup)[] = [];
+      let currentGroup: typeof eligibleGroup = [];
+
+      for (const item of eligibleGroup) {
           if (currentGroup.length === 0) {
               currentGroup.push(item);
           } else {
@@ -163,57 +170,102 @@ export const calculatePrizeAssignments = (
           tiedGroups.push(currentGroup);
       }
 
-      // Group-based Scorrimento Simulation
-      // We evaluate tied groups together to decide who stays in the category pool or slides out.
-      const finalStayList: typeof catEligible = [];
+      // Pool of remaining category prizes
+      let remainingPrizes = catPrizes.map((p, idx) => ({
+        ...p,
+        currentValue: p.value || 0,
+        originalIndex: idx
+      }));
 
-      for (const group of tiedGroups) {
-          const shootersToKeep: typeof catEligible = [];
+      tiedGroups.forEach(group => {
+        if (remainingPrizes.length === 0) return;
 
-          for (const item of group) {
-              const qeAbsolute = absoluteWinnersMap.get(item.shooter.id) || 0;
+        const N = group.length;
+        const shooter0 = group[0].shooter;
+        const pProg = absoluteWinnersMap.get(shooter0.id) || 0;
 
-              // Rule: Stay if they win nothing in program, or if the program prize is less than the 1st category prize (R1)
-              const shouldStay = qeAbsolute < r1;
+        if (pProg > 0) {
+          // Case B: absolute winner who needs integration up to r1
+          const I_each = Math.max(0, r1 - pProg);
+          const I_total = N * I_each;
 
-              if (shouldStay) {
-                  shootersToKeep.push(item);
-              }
+          let accumulated = 0;
+          let lastDrawnIdx = -1;
+
+          for (let i = 0; i < remainingPrizes.length; i++) {
+            const needed = I_total - accumulated;
+            if (needed <= 0) break;
+
+            const p = remainingPrizes[i];
+            const toDraw = Math.min(p.currentValue, needed);
+            p.currentValue -= toDraw;
+            accumulated += toDraw;
+            lastDrawnIdx = i;
           }
 
-          finalStayList.push(...shootersToKeep);
-      }
+          const integrationEach = accumulated / N;
 
-      // Force division for real category assignments
-      const realCatAssignments = getAssignments(catPrizes, finalStayList, true);
-      results.push(...realCatAssignments);
-  });
+          // Label reflects the positions of the prizes we drew from
+          const displayLabel = lastDrawnIdx > 0
+            ? `${remainingPrizes[0].position}°-${remainingPrizes[lastDrawnIdx].position}°`
+            : remainingPrizes[0] ? `${remainingPrizes[0].position}°` : `1°`;
 
-  // Art. 4 - Integrazione del Premio di Programma
-  // Calcoliamo la somma dei premi assoluti/programma vinti da ciascun tiratore
-  const winnersAbsoluteVals = new Map<string, number>();
-  results.forEach(res => {
-    const isAbsolute = res.prize.category === 'Assoluto' || res.prize.category === 'Generale';
-    if (isAbsolute) {
-      winnersAbsoluteVals.set(res.winner.id, (winnersAbsoluteVals.get(res.winner.id) || 0) + (res.prizeValue || 0));
-    }
-  });
+          group.forEach(item => {
+            results.push({
+              prize: remainingPrizes[0],
+              prizeValue: integrationEach,
+              winner: item.shooter,
+              points: item.total,
+              isShared: N > 1,
+              sharedWith: N,
+              label: displayLabel
+            });
+          });
 
-  // Se un tiratore ha vinto sia un premio assoluto che uno di categoria, applichiamo l'integrazione
-  results.forEach(res => {
-    const isAbsolute = res.prize.category === 'Assoluto' || res.prize.category === 'Generale';
-    if (!isAbsolute) {
-      const valAbsolute = winnersAbsoluteVals.get(res.winner.id) || 0;
-      if (valAbsolute > 0) {
-        // Find the 1st reserved prize value for this category
-        const catPrizes = prizes.filter(p => p.category === res.prize.category).sort((a, b) => a.position - b.position);
-        const r1 = catPrizes[0]?.value || 0;
-        
-        // L'integrazione è il valore necessario per raggiungere il 1° premio riservato
-        const integration = Math.max(0, r1 - valAbsolute);
-        res.prizeValue = integration;
-      }
-    }
+          // Update remaining prizes: remove completely consumed ones, merge remainder of the last drawn one
+          let newRemainingPrizes: typeof remainingPrizes = [];
+          for (let i = 0; i < remainingPrizes.length; i++) {
+            const p = remainingPrizes[i];
+            if (i <= lastDrawnIdx) {
+              if (i === lastDrawnIdx && p.currentValue > 0) {
+                if (i + 1 < remainingPrizes.length) {
+                  remainingPrizes[i + 1].currentValue += p.currentValue;
+                }
+              }
+            } else {
+              newRemainingPrizes.push(p);
+            }
+          }
+          remainingPrizes = newRemainingPrizes;
+
+        } else {
+          // Case A: normal shooters with no absolute prize
+          const prizesToTake = remainingPrizes.slice(0, N);
+          if (prizesToTake.length > 0) {
+            const totalVal = prizesToTake.reduce((sum, p) => sum + p.currentValue, 0);
+            const sharedVal = totalVal / N;
+
+            const displayLabel = prizesToTake.length > 1
+              ? `${prizesToTake[0].position}°-${prizesToTake[prizesToTake.length - 1].position}°`
+              : `${prizesToTake[0].position}°`;
+
+            group.forEach(item => {
+              results.push({
+                prize: prizesToTake[0],
+                prizeValue: sharedVal,
+                winner: item.shooter,
+                points: item.total,
+                isShared: N > 1,
+                sharedWith: N,
+                label: displayLabel
+              });
+            });
+
+            // Remove the consumed prizes
+            remainingPrizes = remainingPrizes.slice(N);
+          }
+        }
+      });
   });
 
   // 5. Finalize with Reintegro calcs

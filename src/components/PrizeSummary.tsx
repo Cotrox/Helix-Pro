@@ -406,26 +406,26 @@ export default function PrizeSummary({
       {/* Legend section */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl">
         <h4 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-sky-400 mb-4 flex items-center gap-2">
-          <Info size={14} /> Criteri di Assegnazione Premi (Legenda)
+          <Info size={14} /> Criteri di Assegnazione Premi (Legenda Regolamento)
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-[9px] sm:text-[10px] leading-relaxed">
           <div className="space-y-3">
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Posizionamento in Classifica:</span> Basato sui tiri totali (HITS). In caso di parità, si considera lo spareggio manuale o i colpi effettuati in barrage.
+                <span className="text-white font-bold">Art. 1 – Premi di Programma:</span> Assegnati in base alle eliche colpite. In caso di parità, i premi delle posizioni interessate sono sommati e divisi equamente tra tutti i tiratori a pari merito (senza spareggi in denaro, salvo diversa indicazione).
               </p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Priorità Premi:</span> I premi di Programma (Assoluto) hanno la precedenza d'ufficio. I vincitori cedono il posto in categoria (meccanismo di scorrimento) solo se la quota di programma percepita ($Q_E$) è superiore o uguale al valore nominale ($V_N$) del premio riservato che gli spetterebbe.
+                <span className="text-white font-bold">Art. 2 – Premi Riservati:</span> Assegnati solo ai tiratori appartenenti alla categoria. In caso di pari merito, l'intero fondo premi destinato alla categoria viene sommato e suddiviso in parti uguali tra gli aventi diritto.
               </p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Regola di Deroga (Cumulabilità):</span> Se un tiratore è in ex aequo assoluto e la sua quota effettiva ($Q_E$) è inferiore al valore nominale ($V_N$) del premio di categoria (rivalutato dinamicamente in base allo scorrimento dei tiratori precedenti), ottiene entrambi i premi e non libera il posto.
+                <span className="text-white font-bold">Art. 3 – Cumulo dei Premi:</span> I premi di programma e riservati non sono cumulabili, ad eccezione dell'integrazione prevista dall'Art. 4.
               </p>
             </div>
           </div>
@@ -433,19 +433,19 @@ export default function PrizeSummary({
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Parimerito (D'ufficio):</span> Se la gara è impostata con risoluzione "D'ufficio", i premi del blocco parimerito vengono sommati e divisi equamente tra tutti i contendenti.
+                <span className="text-white font-bold">Art. 4 – Integrazione e Scorrimento:</span> Se il premio di programma percepito è inferiore al 1° premio riservato di categoria, viene integrato fino a tale valore attingendo dal fondo riservato. Le somme restanti e i successivi premi riservati passano ai tiratori della medesima categoria successivi in classifica. Se pari o superiore, il tiratore non ha diritto a integrazioni né premi riservati.
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1 shrink-0"></div>
+              <p className="text-slate-400 uppercase tracking-tight">
+                <span className="text-white font-bold">Art. 5 – Premi Non Assegnati:</span> Se in una categoria non viene raggiunto il numero minimo di partecipanti, il relativo montepremi riservato viene interamente trasferito al montepremi generale di programma.
               </p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
                 <span className="text-white font-bold">Gestione Reintegri:</span> Il reintegro (differenza tra quota standard e agevolata) viene detratto dal premio netto finale. Viene applicato una sola volta per atleta, prioritariamente sul premio assoluto.
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1 shrink-0"></div>
-              <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Posti Vacanti:</span> Se non sono presenti abbastanza tiratori qualificati in una categoria, il relativo premio resta non assegnato.
               </p>
             </div>
           </div>

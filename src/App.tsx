@@ -138,7 +138,7 @@ const FITAV_REGULATIONS = [
     id: 'montepremi',
     title: 'Assegnazione Montepremi FITAV',
     subtitle: 'Regolamento per l\'assegnazione e la suddivisione del montepremi',
-    content: 'Disciplina la ripartizione dei premi di gara. Art. 1 (Premi di Programma): assegnati in base alle eliche colpite; in caso di parità, i premi delle posizioni occupate sono sommati e divisi equamente (senza spareggi per denaro). Art. 2 (Premi Riservati): assegnati esclusivamente agli atleti delle categorie dedicate; in caso di pari merito, l\'intero fondo premi della categoria viene suddiviso in parti uguali. Art. 3 (Cumulo): i premi di programma e riservati non sono cumulabili, salvo integrazione ex Art. 4. Art. 4 (Integrazione): se un tiratore vince un premio di programma inferiore al 1° premio riservato della sua categoria, viene integrato fino a tale valore attingendo dal fondo riservato della categoria; i restanti premi riservati vanno agli altri tiratori secondo la classifica. Art. 5 (Non Assegnati): in mancanza del numero minimo di partecipanti in una categoria, il relativo montepremi riservato viene trasferito a quello generale di programma. Art. 6 (Norme finali): si applicano le norme FITAV vigenti.',
+    content: 'Art. 1 – Premi di Programma: assegnati in base alle eliche colpite. In caso di parità, i premi delle posizioni interessate sono sommati e divisi in parti uguali tra tutti i tiratori a pari merito (senza spareggi in denaro, salvo diversa indicazione). Art. 2 – Premi Riservati: assegnati esclusivamente ai tiratori della relativa categoria. In caso di pari merito, l\'intero fondo premi della categoria viene sommato e suddiviso in parti uguali tra tutti gli aventi diritto. Art. 3 – Cumulo dei Premi: i premi di programma e riservati non sono cumulabili, salvo l\'integrazione prevista dall\'Art. 4. Art. 4 – Integrazione del Premio di Programma: se il premio di programma percepito è inferiore al 1° premio riservato di categoria, viene integrato fino a tale valore attingendo dal fondo riservato. Le somme restanti e i successivi premi riservati passano ai tiratori della medesima categoria successivi in classifica. Se pari o superiore, il tiratore mantiene il premio di programma e non ha diritto a integrazioni o premi riservati. Art. 5 – Premi Riservati Non Assegnati: se in una categoria non si raggiunge il numero minimo di partecipanti, il relativo montepremi non viene assegnato e si trasferisce al montepremi generale di programma. Art. 6 – Norme Finali: si applicano le norme FITAV vigenti e le decisioni della Direzione di Gara.',
     icon: Landmark
   }
 ];
@@ -888,7 +888,7 @@ export default function App() {
                             <div>
                               <h4 className="text-sm font-black text-white uppercase tracking-tight">Giuseppe Antonino Cotroneo</h4>
                               <button
-                                onClick={() => api.openExternal('https://github.com/Cotrox')}
+                                onClick={() => api.openExternal(import.meta.env.VITE_GITHUB_URL || 'https://github.com/Cotrox')}
                                 className="text-[10px] text-amber-400 font-bold hover:text-amber-300 uppercase tracking-widest flex items-center gap-1 mx-auto transition-colors"
                               >
                                 @Cotrox <ExternalLink size={10} />
@@ -911,7 +911,7 @@ export default function App() {
                       <div className="space-y-3 relative z-10">
                         <div className="grid grid-cols-2 gap-3">
                           <button
-                            onClick={() => api.openExternal('https://ko-fi.com/cotrox')}
+                            onClick={() => api.openExternal(import.meta.env.VITE_KOFI_URL || 'https://ko-fi.com/cotrox')}
                             className="bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold py-3.5 px-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 cursor-pointer"
                           >
                             <Coffee size={16} className="animate-bounce" />
@@ -919,7 +919,7 @@ export default function App() {
                           </button>
 
                           <button
-                            onClick={() => api.openExternal('https://www.paypal.com/paypalme/peppecotro')}
+                            onClick={() => api.openExternal(import.meta.env.VITE_PAYPAL_URL || 'https://www.paypal.com/paypalme/peppecotro')}
                             className="bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-bold py-3.5 px-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 cursor-pointer"
                           >
                             <svg className="w-4 h-4 fill-current text-white shrink-0 animate-bounce" viewBox="0 0 16 16">
