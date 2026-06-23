@@ -138,7 +138,41 @@ const FITAV_REGULATIONS = [
     id: 'montepremi',
     title: 'Assegnazione Montepremi FITAV',
     subtitle: 'Regolamento per l\'assegnazione e la suddivisione del montepremi',
-    content: 'Art. 1 – Premi di Programma: assegnati in base alle eliche colpite. In caso di parità, i premi delle posizioni interessate sono sommati e divisi in parti uguali tra tutti i tiratori a pari merito (senza spareggi in denaro, salvo diversa indicazione). Art. 2 – Premi Riservati: assegnati esclusivamente ai tiratori della relativa categoria. In caso di pari merito, l\'intero fondo premi della categoria viene sommato e suddiviso in parti uguali tra tutti gli aventi diritto. Art. 3 – Cumulo dei Premi: i premi di programma e riservati non sono cumulabili, salvo l\'integrazione prevista dall\'Art. 4. Art. 4 – Integrazione del Premio di Programma: se il premio di programma percepito è inferiore al 1° premio riservato di categoria, viene integrato fino a tale valore attingendo dal fondo riservato. Le somme restanti e i successivi premi riservati passano ai tiratori della medesima categoria successivi in classifica. Se pari o superiore, il tiratore mantiene il premio di programma e non ha diritto a integrazioni o premi riservati. Art. 5 – Premi Riservati Non Assegnati: se in una categoria non si raggiunge il numero minimo di partecipanti, il relativo montepremi non viene assegnato e si trasferisce al montepremi generale di programma. Art. 6 – Norme Finali: si applicano le norme FITAV vigenti e le decisioni della Direzione di Gara.',
+    content: `REGOLAMENTO PER L’ASSEGNAZIONE E LA SUDDIVISIONE DEL MONTEPREMI
+
+Art. 1 – Premi di Programma
+I premi di programma saranno assegnati in base al numero di eliche regolarmente colpite.
+In caso di parità di risultato, i premi corrispondenti alle posizioni interessate saranno sommati e suddivisi in parti uguali tra tutti i tiratori classificati a pari merito.
+Esempi:
+- 2 tiratori a pari merito per il 1° posto: somma del 1° e del 2° premio, divisa per 2.
+- 4 tiratori a pari merito per il 3° posto: somma dei premi relativi alle posizioni interessate, divisa per 4.
+Non saranno effettuati spareggi per l’assegnazione dei premi in denaro, salvo diversa indicazione contenuta nel programma di gara.
+
+Art. 2 – Premi Riservati
+I premi riservati (3ª Categoria, Veterani, Master, Junior, Lady e altre categorie eventualmente previste dal programma) saranno assegnati esclusivamente ai tiratori appartenenti alla relativa categoria.
+Qualora più tiratori della stessa categoria conseguano il medesimo risultato utile ai fini dell’assegnazione dei premi riservati, l’intero fondo premi destinato alla categoria sarà sommato e suddiviso in parti uguali tra tutti gli aventi diritto.
+Esempio:
+Premi riservati: 1° premio € 90, 2° premio € 80. Fondo totale: € 170.
+In presenza di 4 tiratori della medesima categoria classificati a pari merito, il fondo sarà suddiviso in parti uguali, con assegnazione di € 42,50 a ciascun tiratore.
+
+Art. 3 – Cumulo dei Premi
+I premi di programma e i premi riservati non sono cumulabili, salvo quanto previsto dal successivo Art. 4.
+Il tiratore che abbia conseguito un premio di programma di importo inferiore al valore del 1° premio riservato della propria categoria potrà beneficiare dell’integrazione prevista dall’Art. 4.
+
+Art. 4 – Integrazione del Premio di Programma
+Qualora un tiratore appartenente a una categoria riservata consegua anche un premio di programma e l’importo effettivamente percepito, a seguito di eventuali divisioni per parità di punteggio, risulti inferiore al valore del 1° premio riservato previsto per la propria categoria, tale premio sarà integrato fino al raggiungimento dell’importo del 1° premio riservato.
+L’integrazione sarà effettuata utilizzando il fondo premi riservato della categoria di appartenenza. la somma rimanente ed i successivi premi riservati andranno ai tiratori di categoria successivi in classifica.
+Esempio: quattro tiratori della categoria Master ottengono un premio di programma complessivo di 68 euro, importo inferiore al primo premio riservato alla categoria Master, pari a 90 euro. Per adeguare il premio al minimo riservato, ai quattro tiratori vengono assegnati 22 euro ciascuno, per un totale di 88 euro. Restano quindi 2 euro del primo premio riservato Master (90 - 88 = 2 euro). Tali 2 euro vengono sommati al secondo premio riservato Master, pari a 80 euro, portando l'importo complessivo a 82 euro. Questo importo sarà assegnato ai successivi tiratori della categoria Master in ordine di classifica. fermo restando che l'importo non superi il premio riservato di categoria spettante.
+I restanti premi riservati saranno assegnati agli altri tiratori della medesima categoria secondo l’ordine di classifica e le modalità previste dal presente regolamento.
+Esempio: Premio di programma percepito: € 72,00. Valore del 1° premio riservato: € 90,00. Il tiratore riceverà un’integrazione di € 18,00 e percepirà complessivamente € 90,00.
+Qualora il premio di programma percepito sia pari o superiore al valore del 1° premio riservato, il tiratore manterrà integralmente il premio di programma e non avrà diritto ad alcuna integrazione né all’assegnazione dei premi riservati.
+
+Art. 5 – Premi Riservati Non Assegnati
+Qualora in una categoria non venga raggiunto il numero minimo di partecipanti eventualmente previsto dal programma di gara, il relativo montepremi riservato non sarà assegnato e sarà trasferito integralmente al montepremi generale della manifestazione. Le somme così trasferite saranno ripartite secondo i criteri previsti per i premi di programma.
+
+Art. 6 – Norme Finali
+Per quanto non espressamente previsto dal presente regolamento si applicano le norme FITAV vigenti e le decisioni della Direzione di Gara.
+L’iscrizione alla competizione comporta l’accettazione integrale e incondizionata del presente regolamento.`,
     icon: Landmark
   }
 ];
@@ -1267,7 +1301,7 @@ export default function App() {
                         <div className="space-y-1">
                           <h5 className="text-xs font-bold text-slate-200 uppercase tracking-tight">{reg.title}</h5>
                           <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{reg.subtitle}</p>
-                          <p className="text-[10px] text-slate-400 leading-relaxed mt-1.5">{reg.content}</p>
+                          <p className="text-[10px] text-slate-400 leading-relaxed mt-1.5 whitespace-pre-line">{reg.content}</p>
                         </div>
                       </div>
                     );

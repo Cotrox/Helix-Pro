@@ -177,93 +177,102 @@ export const calculatePrizeAssignments = (
         originalIndex: idx
       }));
 
+      // Helper function to draw a specific amount from the remaining prizes pool
+      const drawFromPool = (amount: number): number => {
+        let accumulated = 0;
+        let lastDrawnIdx = -1;
+
+        for (let i = 0; i < remainingPrizes.length; i++) {
+          const needed = amount - accumulated;
+          if (needed <= 0) break;
+
+          const p = remainingPrizes[i];
+          const toDraw = Math.min(p.currentValue, needed);
+          p.currentValue -= toDraw;
+          accumulated += toDraw;
+          lastDrawnIdx = i;
+        }
+
+        // Update remainingPrizes: remove fully consumed ones, carry over remainder of the last drawn one
+        let newRemainingPrizes: typeof remainingPrizes = [];
+        for (let i = 0; i < remainingPrizes.length; i++) {
+          const p = remainingPrizes[i];
+          if (i <= lastDrawnIdx) {
+            if (i === lastDrawnIdx && p.currentValue > 0) {
+              if (i + 1 < remainingPrizes.length) {
+                remainingPrizes[i + 1].currentValue += p.currentValue;
+              }
+            }
+          } else {
+            newRemainingPrizes.push(p);
+          }
+        }
+        remainingPrizes = newRemainingPrizes;
+        return accumulated;
+      };
+
       tiedGroups.forEach(group => {
         if (remainingPrizes.length === 0) return;
 
         const N = group.length;
-        const shooter0 = group[0].shooter;
-        const pProg = absoluteWinnersMap.get(shooter0.id) || 0;
 
-        if (pProg > 0) {
-          // Case B: absolute winner who needs integration up to r1
-          const I_each = Math.max(0, r1 - pProg);
-          const I_total = N * I_each;
+        // The group claims the next N category prizes
+        const prizesToTake = remainingPrizes.slice(0, N);
+        const V_claimed = prizesToTake.reduce((sum, p) => sum + p.currentValue, 0);
 
-          let accumulated = 0;
-          let lastDrawnIdx = -1;
+        if (V_claimed === 0 && remainingPrizes.length === 0) return;
 
-          for (let i = 0; i < remainingPrizes.length; i++) {
-            const needed = I_total - accumulated;
-            if (needed <= 0) break;
-
-            const p = remainingPrizes[i];
-            const toDraw = Math.min(p.currentValue, needed);
-            p.currentValue -= toDraw;
-            accumulated += toDraw;
-            lastDrawnIdx = i;
+        const S_nom = N > 0 ? V_claimed / N : 0;
+        
+        // Calculate the desired prize value for each shooter in the group
+        const desiredPrizes = group.map(item => {
+          const pProg = absoluteWinnersMap.get(item.shooter.id) || 0;
+          if (pProg > 0) {
+            // Integrated shooter: needs r1 - pProg
+            return { item, desired: Math.max(0, r1 - pProg), isIntegrated: true };
+          } else {
+            // Normal shooter: gets nominal share
+            return { item, desired: S_nom, isIntegrated: false };
           }
+        });
 
-          const integrationEach = accumulated / N;
+        const W_total = desiredPrizes.reduce((sum, d) => sum + d.desired, 0);
 
-          // Label reflects the positions of the prizes we drew from
-          const displayLabel = lastDrawnIdx > 0
-            ? `${remainingPrizes[0].position}°-${remainingPrizes[lastDrawnIdx].position}°`
-            : remainingPrizes[0] ? `${remainingPrizes[0].position}°` : `1°`;
+        if (W_total > 0) {
+          // Draw the total desired amount from the pool
+          const accumulated = drawFromPool(W_total);
+          const ratio = accumulated / W_total;
 
-          group.forEach(item => {
+          // Label reflects the positions of the prizes claimed
+          const displayLabel = prizesToTake.length > 1
+            ? `${prizesToTake[0].position}°-${prizesToTake[prizesToTake.length - 1].position}°`
+            : prizesToTake[0] ? `${prizesToTake[0].position}°` : `1°`;
+
+          desiredPrizes.forEach(dp => {
+            const finalPrizeVal = dp.desired * ratio;
             results.push({
-              prize: remainingPrizes[0],
-              prizeValue: integrationEach,
-              winner: item.shooter,
-              points: item.total,
+              prize: prizesToTake[0] || remainingPrizes[0] || catPrizes[0],
+              prizeValue: finalPrizeVal,
+              winner: dp.item.shooter,
+              points: dp.item.total,
               isShared: N > 1,
               sharedWith: N,
               label: displayLabel
             });
           });
-
-          // Update remaining prizes: remove completely consumed ones, merge remainder of the last drawn one
-          let newRemainingPrizes: typeof remainingPrizes = [];
-          for (let i = 0; i < remainingPrizes.length; i++) {
-            const p = remainingPrizes[i];
-            if (i <= lastDrawnIdx) {
-              if (i === lastDrawnIdx && p.currentValue > 0) {
-                if (i + 1 < remainingPrizes.length) {
-                  remainingPrizes[i + 1].currentValue += p.currentValue;
-                }
-              }
-            } else {
-              newRemainingPrizes.push(p);
-            }
-          }
-          remainingPrizes = newRemainingPrizes;
-
         } else {
-          // Case A: normal shooters with no absolute prize
-          const prizesToTake = remainingPrizes.slice(0, N);
-          if (prizesToTake.length > 0) {
-            const totalVal = prizesToTake.reduce((sum, p) => sum + p.currentValue, 0);
-            const sharedVal = totalVal / N;
-
-            const displayLabel = prizesToTake.length > 1
-              ? `${prizesToTake[0].position}°-${prizesToTake[prizesToTake.length - 1].position}°`
-              : `${prizesToTake[0].position}°`;
-
-            group.forEach(item => {
-              results.push({
-                prize: prizesToTake[0],
-                prizeValue: sharedVal,
-                winner: item.shooter,
-                points: item.total,
-                isShared: N > 1,
-                sharedWith: N,
-                label: displayLabel
-              });
+          // If all desired prizes are 0, assign 0 to keep them in standings
+          desiredPrizes.forEach(dp => {
+            results.push({
+              prize: prizesToTake[0] || remainingPrizes[0] || catPrizes[0],
+              prizeValue: 0,
+              winner: dp.item.shooter,
+              points: dp.item.total,
+              isShared: N > 1,
+              sharedWith: N,
+              label: prizesToTake[0] ? `${prizesToTake[0].position}°` : `1°`
             });
-
-            // Remove the consumed prizes
-            remainingPrizes = remainingPrizes.slice(N);
-          }
+          });
         }
       });
   });

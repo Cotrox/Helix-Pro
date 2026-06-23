@@ -419,13 +419,13 @@ export default function PrizeSummary({
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Art. 2 – Premi Riservati:</span> Assegnati solo ai tiratori appartenenti alla categoria. In caso di pari merito, l'intero fondo premi destinato alla categoria viene sommato e suddiviso in parti uguali tra gli aventi diritto.
+                <span className="text-white font-bold">Art. 2 – Premi Riservati:</span> Assegnati solo ai tiratori della categoria. In caso di pari merito, l'intero fondo premi destinato alla categoria viene sommato e suddiviso in parti uguali tra gli aventi diritto (es. fondo totale di €170 diviso tra 4 tiratori pari a €42,50 ciascuno).
               </p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Art. 3 – Cumulo dei Premi:</span> I premi di programma e riservati non sono cumulabili, ad eccezione dell'integrazione prevista dall'Art. 4.
+                <span className="text-white font-bold">Art. 3 – Cumulo dei Premi:</span> I premi di programma e riservati non sono cumulabili, salvo l'integrazione prevista dall'Art. 4. Il tiratore con premio di programma inferiore al 1° premio riservato di categoria ha diritto all'integrazione.
               </p>
             </div>
           </div>
@@ -433,19 +433,19 @@ export default function PrizeSummary({
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Art. 4 – Integrazione e Scorrimento:</span> Se il premio di programma percepito è inferiore al 1° premio riservato di categoria, viene integrato fino a tale valore attingendo dal fondo riservato. Le somme restanti e i successivi premi riservati passano ai tiratori della medesima categoria successivi in classifica. Se pari o superiore, il tiratore non ha diritto a integrazioni né premi riservati.
+                <span className="text-white font-bold">Art. 4 – Integrazione e Scorrimento:</span> Se il premio di programma percepito è inferiore al 1° riservato di categoria, viene integrato fino a tale valore attingendo dal fondo riservato. Il residuo del fondo e i successivi premi scorrono ai tiratori di categoria successivi in classifica (es. caso Master: €88 di integrazione su €90 lascia €2 che si sommano al 2° premio, che diventa di €82). Se pari o superiore, non si ha diritto a integrazioni o premi riservati.
               </p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Art. 5 – Premi Non Assegnati:</span> Se in una categoria non viene raggiunto il numero minimo di partecipanti, il relativo montepremi riservato viene interamente trasferito al montepremi generale di programma.
+                <span className="text-white font-bold">Art. 5 – Premi Riservati Non Assegnati:</span> Se in una categoria non viene raggiunto il numero minimo di partecipanti, il relativo montepremi riservato non viene assegnato e si trasferisce integralmente al montepremi generale della manifestazione.
               </p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Gestione Reintegri:</span> Il reintegro (differenza tra quota standard e agevolata) viene detratto dal premio netto finale. Viene applicato una sola volta per atleta, prioritariamente sul premio assoluto.
+                <span className="text-white font-bold">Gestione Reintegri:</span> Il reintegro (differenza tra quota iscrizione standard e agevolata) viene detratto dal premio netto finale. Viene applicato una sola volta per atleta, prioritariamente sul primo premio vinto.
               </p>
             </div>
           </div>
