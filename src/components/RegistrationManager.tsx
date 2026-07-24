@@ -199,19 +199,19 @@ export default function RegistrationManager({ shooters, registrations, settings,
     const index = sorted.findIndex(r => r.id === id);
     if (index === -1) return;
     
-    if (direction === 'up' && index > 0) {
-      const newOrder = [...sorted];
-      const temp = newOrder[index].shootingOrder;
-      newOrder[index].shootingOrder = newOrder[index-1].shootingOrder;
-      newOrder[index-1].shootingOrder = temp;
-      onUpdate(newOrder);
-    } else if (direction === 'down' && index < sorted.length - 1) {
-      const newOrder = [...sorted];
-      const temp = newOrder[index].shootingOrder;
-      newOrder[index].shootingOrder = newOrder[index+1].shootingOrder;
-      newOrder[index+1].shootingOrder = temp;
-      onUpdate(newOrder);
-    }
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+
+    const newOrder = [...sorted];
+    const [moved] = newOrder.splice(index, 1);
+    newOrder.splice(targetIndex, 0, moved);
+
+    const reindexed = newOrder.map((r, idx) => ({
+      ...r,
+      shootingOrder: idx + 1
+    }));
+
+    onUpdate(reindexed);
   };
 
   const handleMassRegister = () => {
@@ -325,7 +325,13 @@ export default function RegistrationManager({ shooters, registrations, settings,
   const removeRegistration = (id: string) => {
     const reg = registrations.find(r => r.id === id);
     const shooter = shooters.find(s => s.id === reg?.shooterId);
-    onUpdate(registrations.filter(r => r.id !== id));
+    const remaining = (registrations || []).filter(r => r.id !== id);
+    const sorted = [...remaining].sort((a, b) => (a.shootingOrder || 0) - (b.shootingOrder || 0));
+    const reindexed = sorted.map((r, idx) => ({
+      ...r,
+      shootingOrder: idx + 1
+    }));
+    onUpdate(reindexed);
     toast.info(`Iscrizione di ${shooter?.lastName} rimossa`);
   };
 
@@ -444,10 +450,11 @@ export default function RegistrationManager({ shooters, registrations, settings,
   const handleDragEndOrder = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = registrations.findIndex((r) => r.id === active.id);
-      const newIndex = registrations.findIndex((r) => r.id === over.id);
+      const sorted = [...registrations].sort((a, b) => (a.shootingOrder || 0) - (b.shootingOrder || 0));
+      const oldIndex = sorted.findIndex((r) => r.id === active.id);
+      const newIndex = sorted.findIndex((r) => r.id === over.id);
       
-      const newArray = arrayMove(registrations, oldIndex, newIndex).map((r, idx) => ({
+      const newArray = arrayMove(sorted, oldIndex, newIndex).map((r, idx) => ({
         ...r,
         shootingOrder: idx + 1
       }));
@@ -764,11 +771,11 @@ export default function RegistrationManager({ shooters, registrations, settings,
                       onDragEnd={handleDragEndOrder}
                     >
                       <SortableContext 
-                        items={registrations.map(r => r.id)}
+                        items={[...registrations].sort((a, b) => (a.shootingOrder || 0) - (b.shootingOrder || 0)).map(r => r.id)}
                         strategy={verticalListSortingStrategy}
                       >
                         <div className="space-y-1">
-                          {registrations.map(reg => (
+                          {[...registrations].sort((a, b) => (a.shootingOrder || 0) - (b.shootingOrder || 0)).map(reg => (
                             <SortableItem key={reg.id} reg={reg} shooter={shooters.find(s => s.id === reg.shooterId)} />
                           ))}
                         </div>

@@ -88,22 +88,43 @@ export default function TournamentView({ tournaments, onUpdateTournaments, sessi
   const removeTournament = (id: string) => {
     onUpdateTournaments(tournaments.filter(t => t.id !== id));
     toast.info('Torneo eliminato correttamente');
-  };
+  };  const calculateTournamentStats = (tournament: Tournament) => {
+    const tournamentSessions = sessions
+      .filter(s => s.settings.tournamentId === tournament.id)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-  const calculateTournamentStats = (tournament: Tournament) => {
-    const tournamentSessions = sessions.filter(s => s.settings.tournamentId === tournament.id);
-    const shooterStats: Record<string, { hits: number, races: number }> = {};
+    const shooterStats: Record<string, { 
+      hits: number; 
+      races: number; 
+      barrageHits: number;
+      raceScores: Record<string, { total: number; barrage: number; participated: boolean }>;
+    }> = {};
 
     tournamentSessions.forEach(session => {
       session.registrations.forEach(reg => {
         const score = session.scores.find(sc => sc.shooterId === reg.shooterId);
         const total = score ? (score.manualTotal !== null ? score.manualTotal : score.seriesScores.reduce((acc: number, val: number | null) => (acc || 0) + (val || 0), 0)) : 0;
         
+        const manualSpareggio = score?.spareggioScore || 0;
+        const barrageHitsTotal = session.barrages && session.barrages.length > 0
+          ? session.barrages.reduce((sum, b) => {
+              const scoresArr = b.scores[reg.shooterId] || [];
+              return sum + scoresArr.reduce((a, b) => a + (b || 0), 0);
+            }, 0)
+          : 0;
+        const totalSpareggio = manualSpareggio + barrageHitsTotal;
+
         if (!shooterStats[reg.shooterId]) {
-          shooterStats[reg.shooterId] = { hits: 0, races: 0 };
+          shooterStats[reg.shooterId] = { hits: 0, races: 0, barrageHits: 0, raceScores: {} };
         }
         shooterStats[reg.shooterId].hits += (total || 0);
         shooterStats[reg.shooterId].races += 1;
+        shooterStats[reg.shooterId].barrageHits += totalSpareggio;
+        shooterStats[reg.shooterId].raceScores[session.id] = {
+          total: total || 0,
+          barrage: totalSpareggio,
+          participated: true
+        };
       });
     });
 
@@ -114,61 +135,127 @@ export default function TournamentView({ tournaments, onUpdateTournaments, sessi
         ...stats,
         isEligible: stats.races >= tournament.majorityThreshold
       }))
-      .sort((a, b) => b.hits - a.hits);
+      .sort((a, b) => {
+        if (b.hits !== a.hits) return b.hits - a.hits;
+        return b.barrageHits - a.barrageHits;
+      });
 
     // Filter only eligible shooters for prize assignment
     const eligibleStats = stats.filter(s => s.isEligible);
     
     // Assign prizes
-    const winners: { prize: TournamentPrize; winner: any }[] = [];
+    const winners: { prize: TournamentPrize; winner: any; sharedVal?: number; isShared?: boolean }[] = [];
     const usedShooterIds = new Set<string>();
 
     if (tournament.advancedPrizes) {
-      // 1. Sort prizes: Assoluto first, then by position
-      const sortedPrizes = [...tournament.advancedPrizes]
-        .filter(p => p.enabled)
+      const enabledPrizes = tournament.advancedPrizes.filter(p => p.enabled);
+      
+      const categoriesInPrizes = Array.from(new Set(enabledPrizes.map(p => p.category)))
         .sort((a, b) => {
-          if (a.category === 'Assoluto' && b.category !== 'Assoluto') return -1;
-          if (a.category !== 'Assoluto' && b.category === 'Assoluto') return 1;
-          return a.position - b.position;
+          if (a === 'Assoluto' && b !== 'Assoluto') return -1;
+          if (a !== 'Assoluto' && b === 'Assoluto') return 1;
+          return 0;
         });
 
-      sortedPrizes.forEach(prize => {
-        let winner: any = null;
-        if (prize.category === 'Assoluto') {
-          // Absolute ranking winners
-          const pool = eligibleStats.filter(s => !usedShooterIds.has(s.shooterId));
-          winner = pool[prize.position - 1] || null;
-        } else {
-          // Category ranking winners
-          const pool = eligibleStats.filter(s => s.shooter?.category === prize.category && !usedShooterIds.has(s.shooterId));
-          winner = pool[prize.position - 1] || null;
+      categoriesInPrizes.forEach(cat => {
+        const catPrizes = enabledPrizes
+          .filter(p => p.category === cat)
+          .sort((a, b) => a.position - b.position);
+
+        if (catPrizes.length === 0) return;
+
+        const pool = cat === 'Assoluto'
+          ? eligibleStats.filter(s => !usedShooterIds.has(s.shooterId))
+          : eligibleStats.filter(s => s.shooter?.category === cat && !usedShooterIds.has(s.shooterId));
+
+        if (pool.length === 0) return;
+
+        // Group consecutive shooters in pool by same (hits, barrageHits)
+        const tiedGroups: (typeof pool)[] = [];
+        let currentGroup: typeof pool = [];
+
+        pool.forEach(item => {
+          if (currentGroup.length === 0) {
+            currentGroup.push(item);
+          } else {
+            const prev = currentGroup[currentGroup.length - 1];
+            if (prev.hits === item.hits && prev.barrageHits === item.barrageHits) {
+              currentGroup.push(item);
+            } else {
+              tiedGroups.push(currentGroup);
+              currentGroup = [item];
+            }
+          }
+        });
+        if (currentGroup.length > 0) {
+          tiedGroups.push(currentGroup);
         }
 
-        if (winner) {
-          winners.push({ prize, winner });
-          usedShooterIds.add(winner.shooterId);
-        }
+        let currentRank = 1;
+        tiedGroups.forEach(group => {
+          const N = group.length;
+          const rankStart = currentRank;
+          const rankEnd = currentRank + N - 1;
+
+          const claimedPrizes = catPrizes.filter(p => p.position >= rankStart && p.position <= rankEnd);
+
+          if (claimedPrizes.length > 0) {
+            const totalVal = claimedPrizes.reduce((sum, p) => sum + (p.value || 0), 0);
+            const valuePerShooter = totalVal / N;
+            const isShared = N > 1;
+
+            group.forEach(item => {
+              winners.push({
+                prize: {
+                  ...claimedPrizes[0],
+                  value: valuePerShooter,
+                  label: isShared ? `${claimedPrizes[0].label} (diviso)` : claimedPrizes[0].label
+                },
+                winner: item,
+                sharedVal: valuePerShooter,
+                isShared
+              });
+              usedShooterIds.add(item.shooterId);
+            });
+          }
+
+          currentRank += N;
+        });
       });
     }
 
-    return { stats, winners };
+    return { stats, winners, tournamentSessions };
   };
 
   const handleExportPDF = async (tournament: Tournament) => {
-    const { stats, winners } = calculateTournamentStats(tournament);
+    const { stats, winners, tournamentSessions } = calculateTournamentStats(tournament);
     
+    const raceHeaders = tournamentSessions.map((s, idx) => `${idx + 1}^ Gara (${s.settings.name})`);
+    const majorityHeaders = ['Pos.', 'Atleta', 'Categoria', ...raceHeaders, 'Hits Totali', 'Gare', 'Stato'];
+
+    const majorityData = stats.map((s, idx) => {
+      const raceCols = tournamentSessions.map(session => {
+        const rData = s.raceScores[session.id];
+        if (!rData || !rData.participated) return '-';
+        return rData.barrage > 0 ? `${rData.total} (+${rData.barrage} B)` : `${rData.total}`;
+      });
+
+      return [
+        `${idx + 1}°`,
+        `${s.shooter?.lastName} ${s.shooter?.firstName}`,
+        s.shooter?.category || '',
+        ...raceCols,
+        s.barrageHits > 0 ? `${s.hits} (+${s.barrageHits} B)` : s.hits.toString(),
+        `${s.races}/${tournament.totalRaces}`,
+        s.isEligible ? 'In Regola' : 'Incompleto'
+      ];
+    });
+
     const sections = [
       {
-        title: 'Classifica di Maggioranza (Idonei)',
-        headers: ['Pos.', 'Atleta', 'Categoria', 'Gare', 'Hits Totali'],
-        data: stats.filter(s => s.isEligible).map((s, idx) => [
-          `${idx + 1}°`,
-          `${s.shooter?.lastName} ${s.shooter?.firstName}`,
-          s.shooter?.category || '',
-          s.races.toString(),
-          s.hits.toString()
-        ])
+        title: 'Classifica di Maggioranza Generale',
+        headers: majorityHeaders,
+        data: majorityData
       }
     ];
 
@@ -180,15 +267,12 @@ export default function TournamentView({ tournaments, onUpdateTournaments, sessi
           w.prize.label,
           `${w.winner.shooter?.lastName} ${w.winner.shooter?.firstName}`,
           w.winner.shooter?.category || '',
-          `${w.winner.hits} / ${w.winner.races}`,
-          `€${w.prize.value}`
+          `${w.winner.hits}${w.winner.barrageHits > 0 ? ` (+${w.winner.barrageHits} B)` : ''} / ${w.winner.races}`,
+          `€${w.prize.value.toFixed(2)}`
         ])
       });
     }
 
-    // Also include non-eligible for completeness if user wants? 
-    // Usually only eligible are in the "Tournament Report".
-    
     const { exportFullReportToPDF } = await import('../services/pdfService');
     exportFullReportToPDF(
       `Report Torneo: ${tournament.name}`,
@@ -474,7 +558,7 @@ export default function TournamentView({ tournaments, onUpdateTournaments, sessi
 
       <div className="grid grid-cols-1 gap-8">
         {tournaments.map(tournament => {
-          const { stats, winners } = calculateTournamentStats(tournament);
+          const { stats, winners, tournamentSessions } = calculateTournamentStats(tournament);
           const sessionsInTournament = sessions.filter(s => s.settings.tournamentId === tournament.id);
 
           return (
@@ -592,19 +676,24 @@ export default function TournamentView({ tournaments, onUpdateTournaments, sessi
                      <Users size={14} /> Classifica di Maggioranza
                   </h5>
                   <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-x-auto no-scrollbar">
-                    <table className="w-full text-left min-w-[600px]">
+                    <table className="w-full text-left min-w-[700px]">
                        <thead className="bg-[#1a2333]">
                          <tr className="text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800">
                            <th className="px-5 py-3">Rank</th>
                            <th className="px-5 py-3">Atleta</th>
-                           <th className="px-5 py-3 text-center">Gare</th>
+                           {tournamentSessions.map((session, idx) => (
+                             <th key={session.id} className="px-4 py-3 text-center truncate max-w-[120px]" title={session.settings.name}>
+                               {idx + 1}^ Gara
+                             </th>
+                           ))}
                            <th className="px-5 py-3 text-center">Hits Totali</th>
+                           <th className="px-5 py-3 text-center">Gare</th>
                            <th className="px-5 py-3 text-right">Idoneità</th>
                          </tr>
                        </thead>
                        <tbody className="divide-y divide-slate-800/50">
                          {stats.map((s, idx) => (
-                           <tr key={s.shooterId} className={`hover:bg-slate-800/30 transition-colors ${!s.isEligible ? 'opacity-40 grayscale' : ''}`}>
+                           <tr key={s.shooterId} className={`hover:bg-slate-800/30 transition-colors ${!s.isEligible ? 'opacity-40' : ''}`}>
                              <td className="px-5 py-4 font-black font-mono text-xs text-slate-500">{idx + 1}°</td>
                              <td className="px-5 py-4">
                                <div className="flex flex-col">
@@ -612,8 +701,26 @@ export default function TournamentView({ tournaments, onUpdateTournaments, sessi
                                  <span className="text-[8px] font-bold text-slate-500 uppercase">{s.shooter?.category}</span>
                                </div>
                              </td>
-                             <td className="px-5 py-4 text-center font-black text-sky-400 text-xs">{s.races}</td>
-                             <td className="px-5 py-4 text-center font-black text-emerald-400 text-lg font-mono italic">{s.hits}</td>
+                             {tournamentSessions.map(session => {
+                               const rData = s.raceScores[session.id];
+                               return (
+                                 <td key={session.id} className="px-4 py-4 text-center font-mono text-xs font-bold text-slate-300">
+                                   {rData?.participated ? (
+                                     rData.barrage > 0 ? (
+                                       <span>{rData.total} <span className="text-[10px] text-amber-500 font-normal">(+{rData.barrage}B)</span></span>
+                                     ) : (
+                                       rData.total
+                                     )
+                                   ) : (
+                                     <span className="text-slate-600">-</span>
+                                   )}
+                                 </td>
+                               );
+                             })}
+                             <td className="px-5 py-4 text-center font-black text-emerald-400 text-lg font-mono italic">
+                               {s.hits} {s.barrageHits > 0 && <span className="text-xs text-amber-500 font-normal"> (+{s.barrageHits}B)</span>}
+                             </td>
+                             <td className="px-5 py-4 text-center font-black text-sky-400 text-xs font-mono">{s.races}/{tournament.totalRaces}</td>
                              <td className="px-5 py-4 text-right">
                                 {s.isEligible ? (
                                   <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded text-[9px] font-black uppercase tracking-widest">In Regola</span>
@@ -625,7 +732,7 @@ export default function TournamentView({ tournaments, onUpdateTournaments, sessi
                          ))}
                          {stats.length === 0 && (
                            <tr key="empty-stats">
-                             <td colSpan={5} className="px-5 py-12 text-center text-slate-600 text-[10px] font-black uppercase italic tracking-widest">Calcolo in attesa di iscrizioni nelle gare associate</td>
+                             <td colSpan={5 + tournamentSessions.length} className="px-5 py-12 text-center text-slate-600 text-[10px] font-black uppercase italic tracking-widest">Calcolo in attesa di iscrizioni nelle gare associate</td>
                            </tr>
                          )}
                        </tbody>

@@ -841,7 +841,7 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl shrink-0">
                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Versione App</span>
-                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v0.0.10 (Beta)</span>
+                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v0.0.13 (Beta)</span>
                     </div>
                   </div>
 

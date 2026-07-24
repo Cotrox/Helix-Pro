@@ -139,10 +139,18 @@ export const calculatePrizeAssignments = (
       const catEligible = rankedData.filter(item => item.shooter.category === cat);
       const r1 = catPrizes[0]?.value || 0;
 
-      // Filter out shooters who won an absolute prize >= r1 (first category prize value)
-      const eligibleGroup = catEligible.filter(item => {
+      // Helper to calculate net program prize (after reintegro) for a shooter
+      const getNetProgramPrize = (item: typeof catEligible[0]) => {
         const pProg = absoluteWinnersMap.get(item.shooter.id) || 0;
-        return pProg < r1;
+        const isReintegroManuallyDisabled = reintegroOverrides[item.shooter.id] === false;
+        const reintegroVal = (!isReintegroManuallyDisabled && item.registration.reintegroAmount) ? item.registration.reintegroAmount : 0;
+        return Math.max(0, pProg - reintegroVal);
+      };
+
+      // Filter out shooters whose net program prize is >= r1 (first category prize value)
+      const eligibleGroup = catEligible.filter(item => {
+        const pNet = getNetProgramPrize(item);
+        return pNet < r1;
       });
 
       // Group consecutive tied shooters (same score)
@@ -177,10 +185,10 @@ export const calculatePrizeAssignments = (
         originalIndex: idx
       }));
 
-      // Helper function to draw a specific amount from the remaining prizes pool
+      // Helper function to draw a specific amount from remaining prizes pool,
+      // keeping remaining pool sorted descending by currentValue (residual cascades/positions by value).
       const drawFromPool = (amount: number): number => {
         let accumulated = 0;
-        let lastDrawnIdx = -1;
 
         for (let i = 0; i < remainingPrizes.length; i++) {
           const needed = amount - accumulated;
@@ -190,24 +198,13 @@ export const calculatePrizeAssignments = (
           const toDraw = Math.min(p.currentValue, needed);
           p.currentValue -= toDraw;
           accumulated += toDraw;
-          lastDrawnIdx = i;
         }
 
-        // Update remainingPrizes: remove fully consumed ones, carry over remainder of the last drawn one
-        let newRemainingPrizes: typeof remainingPrizes = [];
-        for (let i = 0; i < remainingPrizes.length; i++) {
-          const p = remainingPrizes[i];
-          if (i <= lastDrawnIdx) {
-            if (i === lastDrawnIdx && p.currentValue > 0) {
-              if (i + 1 < remainingPrizes.length) {
-                remainingPrizes[i + 1].currentValue += p.currentValue;
-              }
-            }
-          } else {
-            newRemainingPrizes.push(p);
-          }
-        }
-        remainingPrizes = newRemainingPrizes;
+        // Re-sort remaining prizes descending by currentValue (residual goes in position by amount / tail if smaller)
+        remainingPrizes = remainingPrizes
+          .filter(p => p.currentValue > 0)
+          .sort((a, b) => b.currentValue - a.currentValue);
+
         return accumulated;
       };
 
@@ -226,10 +223,11 @@ export const calculatePrizeAssignments = (
         
         // Calculate the desired prize value for each shooter in the group
         const desiredPrizes = group.map(item => {
+          const pNet = getNetProgramPrize(item);
           const pProg = absoluteWinnersMap.get(item.shooter.id) || 0;
           if (pProg > 0) {
-            // Integrated shooter: needs r1 - pProg
-            return { item, desired: Math.max(0, r1 - pProg), isIntegrated: true };
+            // Integrated shooter: needs r1 - pNet (net program prize deducted from 1st category reserved prize)
+            return { item, desired: Math.max(0, r1 - pNet), isIntegrated: true };
           } else {
             // Normal shooter: gets nominal share
             return { item, desired: S_nom, isIntegrated: false };
