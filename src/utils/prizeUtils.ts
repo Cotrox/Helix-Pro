@@ -200,10 +200,11 @@ export const calculatePrizeAssignments = (
           accumulated += toDraw;
         }
 
-        // Re-sort remaining prizes descending by currentValue (residual goes in position by amount / tail if smaller)
+        // Re-sort remaining prizes descending by currentValue.
+        // Residual goes in position by amount (or tail if smaller than other reserved prizes).
         remainingPrizes = remainingPrizes
           .filter(p => p.currentValue > 0)
-          .sort((a, b) => b.currentValue - a.currentValue);
+          .sort((a, b) => (b.currentValue - a.currentValue) || (a.originalIndex - b.originalIndex));
 
         return accumulated;
       };

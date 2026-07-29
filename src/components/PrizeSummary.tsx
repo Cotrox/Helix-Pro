@@ -425,7 +425,7 @@ export default function PrizeSummary({
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Art. 3 – Cumulo dei Premi:</span> I premi di programma e riservati non sono cumulabili, salvo l'integrazione prevista dall'Art. 4. Il tiratore con premio di programma inferiore al 1° premio riservato di categoria ha diritto all'integrazione.
+                <span className="text-white font-bold">Art. 3 – Cumulo dei Premi:</span> I premi di programma e riservati non sono cumulabili, salvo l'integrazione prevista dall'Art. 4. Il tiratore di 3ª categoria o qualifica con premio di programma (al netto del reintegro) inferiore al premio riservato ha diritto all'integrazione.
               </p>
             </div>
           </div>
@@ -433,7 +433,7 @@ export default function PrizeSummary({
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Art. 4 – Integrazione e Scorrimento:</span> Se il premio di programma percepito è inferiore al 1° riservato di categoria, viene integrato fino a tale valore attingendo dal fondo riservato. Il residuo del fondo e i successivi premi scorrono ai tiratori di categoria successivi in classifica (es. caso Master: €88 di integrazione su €90 lascia €2 che si sommano al 2° premio, che diventa di €82). Se pari o superiore, non si ha diritto a integrazioni o premi riservati.
+                <span className="text-white font-bold">Art. 4 – Integrazione e Scorrimento:</span> Qualora un tiratore di 3ª categoria o qualifica percepisca un premio di programma (al netto del reintegro) inferiore al premio riservato, esso viene integrato prelevando dal premio riservato il giusto importo per raggiungere il valore del premio spettante. L'eventuale residuo andrà in coda ai premi riservati della qualifica se inferiore agli stessi premi riservati, o nella posizione che gli compete in base all'importo.
               </p>
             </div>
             <div className="flex items-start gap-3">
