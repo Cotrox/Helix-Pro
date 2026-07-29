@@ -844,7 +844,7 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl shrink-0">
                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Versione App</span>
-                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v0.0.13 (Beta)</span>
+                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v0.0.14 (Beta)</span>
                     </div>
                   </div>
 
@@ -1392,7 +1392,7 @@ export default function App() {
                         tournaments: JSON.parse(JSON.stringify(tournaments))
                       };
                       setSystemHistory(prev => [newSnapshot, ...prev].slice(0, 3));
-                      
+
                       // Write to DB immediately to avoid delay/timeouts/race conditions
                       await Promise.all([
                         api.saveShooters(pendingImportData.shooters || []),
@@ -1400,7 +1400,7 @@ export default function App() {
                         api.saveTournaments(pendingImportData.tournaments || []),
                         api.saveFeedbacks(pendingImportData.feedbacks || [])
                       ]);
-                      
+
                       // Update React state
                       setShooters(pendingImportData.shooters || []);
                       setSessions(pendingImportData.sessions || []);
@@ -1413,7 +1413,7 @@ export default function App() {
                       } else {
                         setSelectedSessionId(null);
                       }
-                      
+
                       toast.success('Dati importati con successo e backup storico creato');
                     } catch (err) {
                       toast.error('Errore durante il salvataggio dei dati importati');
