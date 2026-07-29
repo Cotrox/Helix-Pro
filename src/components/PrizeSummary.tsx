@@ -433,7 +433,7 @@ export default function PrizeSummary({
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 shrink-0"></div>
               <p className="text-slate-400 uppercase tracking-tight">
-                <span className="text-white font-bold">Art. 4 – Integrazione e Scorrimento:</span> Qualora un tiratore di 3ª categoria o qualifica percepisca un premio di programma (al netto del reintegro) inferiore al premio riservato, esso viene integrato prelevando dal premio riservato il giusto importo per raggiungere il valore del premio spettante. L'eventuale residuo andrà in coda ai premi riservati della qualifica se inferiore agli stessi premi riservati, o nella posizione che gli compete in base all'importo.
+                <span className="text-white font-bold">Art. 4 – Integrazione e Scorrimento:</span> Qualora un tiratore di 3ª categoria o qualifica percepisca un premio di programma (al netto del reintegro) inferiore al premio riservato, detto premio viene integrato prelevando dal premio riservato il giusto importo per raggiungere il valore del premio spettante alla categoria meno il previsto reintegro. L'eventuale residuo andrà in coda ai premi riservati della qualifica se inferiore agli stessi premi riservati, o nella posizione che gli compete in base all'importo.
               </p>
             </div>
             <div className="flex items-start gap-3">

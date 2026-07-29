@@ -160,15 +160,16 @@ I premi di programma e i premi riservati non sono cumulabili, salvo quanto previ
 Il tiratore di 3ª categoria o di una qualifica che abbia conseguito un premio di programma di importo (al netto del previsto reintegro) inferiore al valore del 1° premio riservato della propria categoria potrà beneficiare dell’integrazione prevista dall’Art. 4.
 
 Art. 4 – Integrazione del Premio di Programma
-Qualora un tiratore di 3ª categoria o di una qualifica percepisse un premio conseguentemente alla divisione con altri tiratori di uno o più premi di programma, il cui importo, al netto del previsto reintegro, risultasse inferiore al premio riservato, detto premio sarà integrato prelevando dal premio riservato il giusto importo per un valore uguale al premio riservato spettante alla categoria. L’eventuale residuo del premio andrà in coda ai premi riservati della qualifica se inferiore degli stessi premi riservati, o nella posizione che gli compete in base all’importo.
+Qualora un tiratore di 3ª categoria o di una qualifica percepisse un premio conseguentemente alla divisione con altri tiratori di uno o più premi di programma, il cui importo, al netto del previsto reintegro, risultasse inferiore al premio riservato, detto premio sarà integrato prelevando dal premio riservato il giusto importo per un valore uguale al premio riservato spettante alla categoria meno il previsto reintegro. L’eventuale residuo del premio andrà in coda ai premi riservati della qualifica se inferiore degli stessi premi riservati, o nella posizione che gli compete in base all’importo.
 
 Esempio:
-Quattro tiratori della categoria Master percepiscono a seguito della divisione dei premi di programma un importo netto di 17,00 € ciascuno (totale 68,00 €), a fronte di un 1° premio riservato alla categoria Master di 90,00 €. Ciascun tiratore riceve un'integrazione di 73,00 € (pari a 90,00 € - 17,00 €) prelevata dal fondo riservato della categoria Master.
+Quattro tiratori della categoria Master percepiscono a seguito della divisione dei premi di programma un importo netto di 17,00 € ciascuno (totale 68,00 € con reintegro nullo), a fronte di un 1° premio riservato alla categoria Master di 90,00 €. Ciascun tiratore riceve un'integrazione di 73,00 € (pari a 90,00 € - 17,00 €) prelevata dal fondo riservato della categoria Master.
+Qualora un tiratore con reintegro pari a 20,00 € percepisca un premio di programma lordo di 70,00 € (netto 50,00 €) a fronte di un 1° premio riservato di 90,00 € (valore netto da raggiungere: 90,00 € - 20,00 € = 70,00 €), l'integrazione dal premio riservato sarà pari a 20,00 € (70,00 € - 50,00 €).
 Qualora l'integrazione effettuata lasci un residuo del 1° premio riservato (ad esempio 2,00 € su 90,00 €), tale residuo andrà in coda ai premi riservati della qualifica se inferiore agli stessi premi riservati (es. inferiore al 2° premio riservato di 80,00 €), venendo assegnato al tiratore successivo in classifica. Se il residuo risultasse invece superiore ai successivi premi riservati, esso occuperà la posizione che gli compete in base all’importo.
 
 I restanti premi riservati saranno assegnati agli altri tiratori della medesima categoria secondo l’ordine di classifica e le modalità previste dal presente regolamento.
-Esempio: Premio di programma percepito (al netto del reintegro): € 72,00. Valore del 1° premio riservato: € 90,00. Il tiratore riceverà un’integrazione di € 18,00 e percepirà complessivamente € 90,00 netti.
-Qualora il premio di programma percepito (al netto del reintegro) sia pari o superiore al valore del 1° premio riservato, il tiratore manterrà integralmente il premio di programma e non avrà diritto ad alcuna integrazione né all’assegnazione dei premi riservati.
+Esempio: Premio di programma percepito (al netto del reintegro): € 72,00. Valore del 1° premio riservato: € 90,00 (reintegro € 0,00). Il tiratore riceverà un’integrazione di € 18,00 e percepirà complessivamente € 90,00 netti.
+Qualora il premio di programma percepito (al netto del reintegro) sia pari o superiore al valore del 1° premio riservato (meno eventuale reintegro), il tiratore manterrà integralmente il premio di programma e non avrà diritto ad alcuna integrazione né all’assegnazione dei premi riservati.
 
 Art. 5 – Premi Riservati Non Assegnati
 Qualora in una categoria non venga raggiunto il numero minimo di partecipanti eventualmente previsto dal programma di gara, il relativo montepremi riservato non sarà assegnato e sarà trasferito integralmente al montepremi generale della manifestazione. Le somme così trasferite saranno ripartite secondo i criteri previsti per i premi di programma.
@@ -844,7 +845,7 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl shrink-0">
                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Versione App</span>
-                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v0.0.14 (Beta)</span>
+                      <span className="text-xs text-sky-400 font-mono font-bold uppercase">v0.0.15 (Beta)</span>
                     </div>
                   </div>
 

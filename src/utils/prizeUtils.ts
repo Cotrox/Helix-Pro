@@ -226,9 +226,13 @@ export const calculatePrizeAssignments = (
         const desiredPrizes = group.map(item => {
           const pNet = getNetProgramPrize(item);
           const pProg = absoluteWinnersMap.get(item.shooter.id) || 0;
+          const isReintegroManuallyDisabled = reintegroOverrides[item.shooter.id] === false;
+          const reintegroVal = (!isReintegroManuallyDisabled && item.registration.reintegroAmount) ? item.registration.reintegroAmount : 0;
+
           if (pProg > 0) {
-            // Integrated shooter: needs r1 - pNet (net program prize deducted from 1st category reserved prize)
-            return { item, desired: Math.max(0, r1 - pNet), isIntegrated: true };
+            // Integrated shooter: target net is (r1 - reintegroVal). Integration needed from category reserved prize is targetNet - pNet.
+            const targetNet = Math.max(0, r1 - reintegroVal);
+            return { item, desired: Math.max(0, targetNet - pNet), isIntegrated: true };
           } else {
             // Normal shooter: gets nominal share
             return { item, desired: S_nom, isIntegrated: false };
