@@ -144,7 +144,7 @@ export const calculatePrizeAssignments = (
         const pProg = absoluteWinnersMap.get(item.shooter.id) || 0;
         const isReintegroManuallyDisabled = reintegroOverrides[item.shooter.id] === false;
         const reintegroVal = (!isReintegroManuallyDisabled && item.registration.reintegroAmount) ? item.registration.reintegroAmount : 0;
-        return Math.max(0, pProg - reintegroVal);
+        return pProg - reintegroVal;
       };
 
       // Filter out shooters whose net program prize is >= r1 (first category prize value)
@@ -226,13 +226,11 @@ export const calculatePrizeAssignments = (
         const desiredPrizes = group.map(item => {
           const pNet = getNetProgramPrize(item);
           const pProg = absoluteWinnersMap.get(item.shooter.id) || 0;
-          const isReintegroManuallyDisabled = reintegroOverrides[item.shooter.id] === false;
-          const reintegroVal = (!isReintegroManuallyDisabled && item.registration.reintegroAmount) ? item.registration.reintegroAmount : 0;
 
           if (pProg > 0) {
-            // Integrated shooter: target net is (r1 - reintegroVal). Integration needed from category reserved prize is targetNet - pNet.
-            const targetNet = Math.max(0, r1 - reintegroVal);
-            return { item, desired: Math.max(0, targetNet - pNet), isIntegrated: true };
+            // Integrated shooter: needs (r1 - pNet) to reach category target, capped at nominal share S_nom
+            const neededIntegration = Math.max(0, r1 - pNet);
+            return { item, desired: Math.min(S_nom, neededIntegration), isIntegrated: true };
           } else {
             // Normal shooter: gets nominal share
             return { item, desired: S_nom, isIntegrated: false };
