@@ -293,7 +293,15 @@ export default function App() {
             participants: (b.participants || []).filter(Boolean).map((p: any) => String(p))
           }))
         }));
-        const sanitizedTournaments = loadedTournaments.map(t => ({ ...t, id: String(t.id) }));
+        const sanitizedTournaments = loadedTournaments.map(t => ({
+          ...t,
+          id: String(t.id),
+          barrages: (t.barrages || []).filter(Boolean).map((b: any) => ({
+            ...b,
+            id: String(b.id),
+            participants: (b.participants || []).filter(Boolean).map((p: any) => String(p))
+          }))
+        }));
         const sanitizedFeedbacks = (loadedFeedbacks || []).map(f => ({ ...f, id: String(f.id) }));
 
         setShooters(sanitizedShooters);

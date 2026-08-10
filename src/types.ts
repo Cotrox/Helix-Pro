@@ -61,6 +61,7 @@ export interface Tournament {
     type: 'fixed' | 'percentage';
     value: number;
   };
+  barrages?: Barrage[];
   active?: boolean;
   createdAt: string;
 }

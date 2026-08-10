@@ -6,14 +6,16 @@ import { exportToPDF } from '../services/pdfService';
 
 interface Props {
   shooters: Shooter[];
-  registrations: Registration[];
-  scores: Score[];
-  settings: CompetitionSettings;
+  registrations?: Registration[];
+  scores?: Score[];
+  settings?: CompetitionSettings;
+  tournamentStats?: { shooterId: string; shooter?: Shooter; hits: number; isEligible: boolean }[];
   barrages: Barrage[];
   onUpdateBarrages: (barrages: Barrage[]) => void;
+  title?: string;
 }
 
-export default function BarrageView({ shooters, registrations, scores, settings, barrages, onUpdateBarrages }: Props) {
+export default function BarrageView({ shooters, registrations, scores, settings, tournamentStats, barrages, onUpdateBarrages, title }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [nPerCategory, setNPerCategory] = useState(1);
   const [selectedShooters, setSelectedShooters] = useState<string[]>([]);
@@ -23,13 +25,23 @@ export default function BarrageView({ shooters, registrations, scores, settings,
   const [bTargetsPerSeries, setBTargetsPerSeries] = useState(1);
 
   const rankedData = useMemo(() => {
-    return registrations.map(reg => {
-      const shooter = shooters.find(s => s.id === reg.shooterId);
-      const score = scores.find(sc => sc.shooterId === reg.shooterId);
-      const total = score ? (score.manualTotal !== null ? score.manualTotal : score.seriesScores.reduce((a: number, b) => (a ?? 0) + (b ?? 0), 0) ?? 0) : 0;
-      return { shooter, total, shooterId: reg.shooterId };
-    }).sort((a, b) => b.total - a.total);
-  }, [registrations, shooters, scores]);
+    if (tournamentStats) {
+      return tournamentStats.map(s => ({
+        shooter: s.shooter,
+        total: s.hits,
+        shooterId: s.shooterId
+      })).sort((a, b) => b.total - a.total);
+    }
+    if (registrations && scores) {
+      return registrations.map(reg => {
+        const shooter = shooters.find(s => s.id === reg.shooterId);
+        const score = scores.find(sc => sc.shooterId === reg.shooterId);
+        const total = score ? (score.manualTotal !== null ? score.manualTotal : score.seriesScores.reduce((a: number, b) => (a ?? 0) + (b ?? 0), 0) ?? 0) : 0;
+        return { shooter, total, shooterId: reg.shooterId };
+      }).sort((a, b) => b.total - a.total);
+    }
+    return [];
+  }, [tournamentStats, registrations, shooters, scores]);
 
   const handleAutoSelect = () => {
     const selectedIds = new Set<string>();
@@ -101,7 +113,7 @@ export default function BarrageView({ shooters, registrations, scores, settings,
       <div className="flex justify-between items-center bg-card-bg p-8 rounded-2xl border border-slate-800 shadow-2xl">
         <div className="space-y-1">
           <h2 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <Target className="text-amber-500" size={20} /> Management Barrages
+            <Target className="text-amber-500" size={20} /> {title || 'Management Barrages'}
           </h2>
           <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-1 italic">Gestione mini-gare e finali post-competizione</p>
         </div>

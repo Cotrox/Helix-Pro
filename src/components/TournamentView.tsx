@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Layers, Plus, Trash2, Trophy, Users, FileDown, ShieldCheck, Calculator, Pencil, Download, Upload } from 'lucide-react';
+import { Layers, Plus, Trash2, Trophy, Users, FileDown, ShieldCheck, Calculator, Pencil, Download, Upload, Target } from 'lucide-react';
 import { Tournament, Session, Shooter, CATEGORIES, TournamentPrize } from '../types';
 import { toast } from 'sonner';
 import { useRef } from 'react';
+import BarrageView from './BarrageView';
 
 interface Props {
   tournaments: Tournament[];
@@ -14,6 +15,7 @@ interface Props {
 export default function TournamentView({ tournaments, onUpdateTournaments, sessions, shooters }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [activeTabs, setActiveTabs] = useState<Record<string, 'majority' | 'barrage'>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const initialTournament: Omit<Tournament, 'id' | 'createdAt'> = {
@@ -97,34 +99,55 @@ export default function TournamentView({ tournaments, onUpdateTournaments, sessi
       hits: number; 
       races: number; 
       barrageHits: number;
-      raceScores: Record<string, { total: number; barrage: number; participated: boolean }>;
+      raceScores: Record<string, { total: number; barrage: number; participated: boolean; isExcluded?: boolean }>;
+      allRaceTotals: { sessionId: string; total: number }[];
     }> = {};
 
     tournamentSessions.forEach(session => {
       session.registrations.forEach(reg => {
         const score = session.scores.find(sc => sc.shooterId === reg.shooterId);
         const total = score ? (score.manualTotal !== null ? score.manualTotal : score.seriesScores.reduce((acc: number, val: number | null) => (acc || 0) + (val || 0), 0)) : 0;
-        
-        const manualSpareggio = score?.spareggioScore || 0;
-        const barrageHitsTotal = session.barrages && session.barrages.length > 0
-          ? session.barrages.reduce((sum, b) => {
-              const scoresArr = b.scores[reg.shooterId] || [];
-              return sum + scoresArr.reduce((a, b) => a + (b || 0), 0);
-            }, 0)
-          : 0;
-        const totalSpareggio = manualSpareggio + barrageHitsTotal;
 
         if (!shooterStats[reg.shooterId]) {
-          shooterStats[reg.shooterId] = { hits: 0, races: 0, barrageHits: 0, raceScores: {} };
+          shooterStats[reg.shooterId] = { hits: 0, races: 0, barrageHits: 0, raceScores: {}, allRaceTotals: [] };
         }
-        shooterStats[reg.shooterId].hits += (total || 0);
         shooterStats[reg.shooterId].races += 1;
-        shooterStats[reg.shooterId].barrageHits += totalSpareggio;
+        shooterStats[reg.shooterId].allRaceTotals.push({ sessionId: session.id, total: total || 0 });
         shooterStats[reg.shooterId].raceScores[session.id] = {
           total: total || 0,
-          barrage: totalSpareggio,
+          barrage: 0, // Individual race barrages do not modify tournament ranking
           participated: true
         };
+      });
+    });
+
+    // Sum barrage hits strictly from tournament.barrages (Tournament Barrages)
+    if (tournament.barrages && tournament.barrages.length > 0) {
+      tournament.barrages.forEach(b => {
+        Object.entries(b.scores || {}).forEach(([shooterId, scoresArr]) => {
+          if (shooterStats[shooterId]) {
+            const sumBarrage = Array.isArray(scoresArr)
+              ? scoresArr.reduce((acc, val) => acc + (val || 0), 0)
+              : (typeof scoresArr === 'number' ? scoresArr : 0);
+            shooterStats[shooterId].barrageHits += sumBarrage;
+          }
+        });
+      });
+    }
+
+    // Majority ranking best N scores calculation (automatically exclude lowest scores)
+    const threshold = tournament.majorityThreshold || 3;
+    Object.values(shooterStats).forEach(sStat => {
+      const sortedRaces = [...sStat.allRaceTotals].sort((a, b) => b.total - a.total);
+      const includedRaces = sortedRaces.slice(0, threshold);
+      const excludedRaces = sortedRaces.slice(threshold);
+
+      sStat.hits = includedRaces.reduce((sum, r) => sum + r.total, 0);
+
+      excludedRaces.forEach(r => {
+        if (sStat.raceScores[r.sessionId]) {
+          sStat.raceScores[r.sessionId].isExcluded = true;
+        }
       });
     });
 
@@ -237,7 +260,8 @@ export default function TournamentView({ tournaments, onUpdateTournaments, sessi
       const raceCols = tournamentSessions.map(session => {
         const rData = s.raceScores[session.id];
         if (!rData || !rData.participated) return '-';
-        return rData.barrage > 0 ? `${rData.total} (+${rData.barrage} B)` : `${rData.total}`;
+        if (rData.isExcluded) return `${rData.total} (scartata)`;
+        return `${rData.total}`;
       });
 
       return [
@@ -251,13 +275,38 @@ export default function TournamentView({ tournaments, onUpdateTournaments, sessi
       ];
     });
 
-    const sections = [
+    const sections: { title: string; headers: string[]; data: any[][] }[] = [
       {
         title: 'Classifica di Maggioranza Generale',
         headers: majorityHeaders,
         data: majorityData
       }
     ];
+
+    if (tournament.barrages && tournament.barrages.length > 0) {
+      tournament.barrages.forEach((b) => {
+        const bHeaders = ['Pos.', 'Atleta', 'Hits Barrage'];
+        const bRanked = b.participants.map(pid => {
+          const sh = shooters.find(s => s.id === pid);
+          const rawScores = b.scores[pid];
+          const pScores = Array.isArray(rawScores) ? rawScores : (typeof rawScores === 'number' ? [rawScores] : [0]);
+          const bTotal = pScores.reduce((acc, val) => acc + (val || 0), 0);
+          return { shooter: sh, total: bTotal };
+        }).sort((a, b) => b.total - a.total);
+
+        const bData = bRanked.map((d, i) => [
+          `${i + 1}°`,
+          `${d.shooter?.lastName} ${d.shooter?.firstName}`,
+          d.total.toString()
+        ]);
+
+        sections.push({
+          title: `Barrage Torneo: ${b.name}`,
+          headers: bHeaders,
+          data: bData
+        });
+      });
+    }
 
     if (winners.length > 0) {
       sections.unshift({
@@ -612,135 +661,174 @@ export default function TournamentView({ tournaments, onUpdateTournaments, sessi
                 </div>
               </div>
 
-              <div className="p-6 sm:p-8 space-y-8">
-                {/* Winners Section */}
-                {winners.length > 0 && (
-                  <div className="space-y-4">
-                    <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                       <Trophy size={14} /> Vincitori Premi Torneo
-                    </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {winners.map((win, idx) => (
-                        <div key={idx} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden group/winner hover:border-amber-500/50 transition-all">
-                          <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-bl-full -mr-8 -mt-8 group-hover/winner:bg-amber-500/10 transition-colors" />
-                          <div className="flex justify-between items-start z-10">
-                            <div className="p-2 bg-slate-950 rounded-lg border border-slate-800 text-sky-500 group-hover/winner:scale-110 transition-transform">
-                              <ShieldCheck size={16} />
-                            </div>
-                            <div className="text-right">
-                              <span className="text-[10px] font-black text-amber-500 font-mono italic">€{win.prize.value}</span>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest leading-loose">
-                              {win.prize.category} • {win.prize.position}° Pos.
-                            </p>
-                            <h6 className="text-[10px] font-black text-slate-200 uppercase tracking-tight group-hover/winner:text-white transition-colors">
-                              {win.prize.label}
-                            </h6>
-                          </div>
-                          <div className="mt-auto pt-3 border-t border-slate-800/50 flex flex-col">
-                            <span className="text-xs font-black text-amber-400 uppercase tracking-tighter">
-                              {win.winner.shooter?.lastName} {win.winner.shooter?.firstName}
-                            </span>
-                            <span className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">
-                              {win.winner.hits} Hits / {win.winner.races} Gare
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div className="flex border-b border-slate-800 px-6 sm:px-8 bg-slate-950/40 gap-6">
+                <button
+                  onClick={() => setActiveTabs({ ...activeTabs, [tournament.id]: 'majority' })}
+                  className={`py-4 text-xs font-black uppercase tracking-widest flex items-center gap-2 border-b-2 transition ${
+                    (activeTabs[tournament.id] || 'majority') === 'majority'
+                      ? 'border-amber-500 text-amber-500'
+                      : 'border-transparent text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <Users size={16} /> Classifica Maggioranza
+                </button>
+                <button
+                  onClick={() => setActiveTabs({ ...activeTabs, [tournament.id]: 'barrage' })}
+                  className={`py-4 text-xs font-black uppercase tracking-widest flex items-center gap-2 border-b-2 transition ${
+                    activeTabs[tournament.id] === 'barrage'
+                      ? 'border-amber-500 text-amber-500'
+                      : 'border-transparent text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <Target size={16} /> Barrage Torneo {(tournament.barrages && tournament.barrages.length > 0) ? `(${tournament.barrages.length})` : ''}
+                </button>
+              </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-                  <div className="xl:col-span-1 space-y-4">
-                     <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                       <Plus size={14} /> Gare Associate ({sessionsInTournament.length})
-                     </h5>
-                   <div className="space-y-2">
-                     {sessionsInTournament.map(s => (
-                       <div key={s.id} className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between group/race">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase truncate">{s.settings.name}</span>
-                          <span className="text-[8px] bg-sky-500/10 text-sky-500 px-2 py-0.5 rounded font-black">{s.status}</span>
-                       </div>
-                     ))}
-                     {sessionsInTournament.length === 0 && (
-                       <p className="text-[9px] text-slate-600 font-bold italic uppercase">Nessuna gara associata. Vai in configurazione gara per collegarla.</p>
-                     )}
-                   </div>
+              {activeTabs[tournament.id] === 'barrage' ? (
+                <div className="p-4 sm:p-6">
+                  <BarrageView
+                    shooters={shooters}
+                    tournamentStats={stats}
+                    barrages={tournament.barrages || []}
+                    onUpdateBarrages={(newBarrages) => {
+                      onUpdateTournaments(tournaments.map(t => t.id === tournament.id ? { ...t, barrages: newBarrages } : t));
+                    }}
+                    title={`Barrage Torneo: ${tournament.name}`}
+                  />
                 </div>
+              ) : (
+                <div className="p-6 sm:p-8 space-y-8">
+                  {/* Winners Section */}
+                  {winners.length > 0 && (
+                    <div className="space-y-4">
+                      <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                         <Trophy size={14} /> Vincitori Premi Torneo
+                      </h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {winners.map((win, idx) => (
+                          <div key={idx} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden group/winner hover:border-amber-500/50 transition-all">
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-bl-full -mr-8 -mt-8 group-hover/winner:bg-amber-500/10 transition-colors" />
+                            <div className="flex justify-between items-start z-10">
+                              <div className="p-2 bg-slate-950 rounded-lg border border-slate-800 text-sky-500 group-hover/winner:scale-110 transition-transform">
+                                <ShieldCheck size={16} />
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[10px] font-black text-amber-500 font-mono italic">€{win.prize.value}</span>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest leading-loose">
+                                {win.prize.category} • {win.prize.position}° Pos.
+                              </p>
+                              <h6 className="text-[10px] font-black text-slate-200 uppercase tracking-tight group-hover/winner:text-white transition-colors">
+                                {win.prize.label}
+                              </h6>
+                            </div>
+                            <div className="mt-auto pt-3 border-t border-slate-800/50 flex flex-col">
+                              <span className="text-xs font-black text-amber-400 uppercase tracking-tighter">
+                                {win.winner.shooter?.lastName} {win.winner.shooter?.firstName}
+                              </span>
+                              <span className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">
+                                {win.winner.hits} Hits / {win.winner.races} Gare
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                <div className="xl:col-span-3 space-y-4">
-                  <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                     <Users size={14} /> Classifica di Maggioranza
-                  </h5>
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-x-auto no-scrollbar">
-                    <table className="w-full text-left min-w-[700px]">
-                       <thead className="bg-[#1a2333]">
-                         <tr className="text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800">
-                           <th className="px-5 py-3">Rank</th>
-                           <th className="px-5 py-3">Atleta</th>
-                           {tournamentSessions.map((session, idx) => (
-                             <th key={session.id} className="px-4 py-3 text-center truncate max-w-[120px]" title={session.settings.name}>
-                               {idx + 1}^ Gara
-                             </th>
-                           ))}
-                           <th className="px-5 py-3 text-center">Hits Totali</th>
-                           <th className="px-5 py-3 text-center">Gare</th>
-                           <th className="px-5 py-3 text-right">Idoneità</th>
-                         </tr>
-                       </thead>
-                       <tbody className="divide-y divide-slate-800/50">
-                         {stats.map((s, idx) => (
-                           <tr key={s.shooterId} className={`hover:bg-slate-800/30 transition-colors ${!s.isEligible ? 'opacity-40' : ''}`}>
-                             <td className="px-5 py-4 font-black font-mono text-xs text-slate-500">{idx + 1}°</td>
-                             <td className="px-5 py-4">
-                               <div className="flex flex-col">
-                                 <span className="text-xs font-black text-slate-200 uppercase">{s.shooter?.lastName} {s.shooter?.firstName}</span>
-                                 <span className="text-[8px] font-bold text-slate-500 uppercase">{s.shooter?.category}</span>
-                               </div>
-                             </td>
-                             {tournamentSessions.map(session => {
-                               const rData = s.raceScores[session.id];
-                               return (
-                                 <td key={session.id} className="px-4 py-4 text-center font-mono text-xs font-bold text-slate-300">
-                                   {rData?.participated ? (
-                                     rData.barrage > 0 ? (
-                                       <span>{rData.total} <span className="text-[10px] text-amber-500 font-normal">(+{rData.barrage}B)</span></span>
+                  <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+                    <div className="xl:col-span-1 space-y-4">
+                       <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                         <Plus size={14} /> Gare Associate ({sessionsInTournament.length})
+                       </h5>
+                     <div className="space-y-2">
+                       {sessionsInTournament.map(s => (
+                         <div key={s.id} className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between group/race">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase truncate">{s.settings.name}</span>
+                            <span className="text-[8px] bg-sky-500/10 text-sky-500 px-2 py-0.5 rounded font-black">{s.status}</span>
+                         </div>
+                       ))}
+                       {sessionsInTournament.length === 0 && (
+                         <p className="text-[9px] text-slate-600 font-bold italic uppercase">Nessuna gara associata. Vai in configurazione gara per collegarla.</p>
+                       )}
+                     </div>
+                  </div>
+
+                  <div className="xl:col-span-3 space-y-4">
+                    <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                       <Users size={14} /> Classifica di Maggioranza
+                    </h5>
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-x-auto no-scrollbar">
+                      <table className="w-full text-left min-w-[700px]">
+                         <thead className="bg-[#1a2333]">
+                           <tr className="text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800">
+                             <th className="px-5 py-3">Rank</th>
+                             <th className="px-5 py-3">Atleta</th>
+                             {tournamentSessions.map((session, idx) => (
+                               <th key={session.id} className="px-4 py-3 text-center truncate max-w-[120px]" title={session.settings.name}>
+                                 {idx + 1}^ Gara
+                               </th>
+                             ))}
+                             <th className="px-5 py-3 text-center">Hits Totali</th>
+                             <th className="px-5 py-3 text-center">Gare</th>
+                             <th className="px-5 py-3 text-right">Idoneità</th>
+                           </tr>
+                         </thead>
+                         <tbody className="divide-y divide-slate-800/50">
+                           {stats.map((s, idx) => (
+                             <tr key={s.shooterId} className={`hover:bg-slate-800/30 transition-colors ${!s.isEligible ? 'opacity-40' : ''}`}>
+                               <td className="px-5 py-4 font-black font-mono text-xs text-slate-500">{idx + 1}°</td>
+                               <td className="px-5 py-4">
+                                 <div className="flex flex-col">
+                                   <span className="text-xs font-black text-slate-200 uppercase">{s.shooter?.lastName} {s.shooter?.firstName}</span>
+                                   <span className="text-[8px] font-bold text-slate-500 uppercase">{s.shooter?.category}</span>
+                                 </div>
+                               </td>
+                               {tournamentSessions.map(session => {
+                                 const rData = s.raceScores[session.id];
+                                 return (
+                                   <td key={session.id} className="px-4 py-4 text-center font-mono text-xs font-bold text-slate-300">
+                                     {rData?.participated ? (
+                                       rData.isExcluded ? (
+                                         <span className="line-through text-slate-500 font-normal" title="Scartato: gara con punteggio minore non conteggiata nella maggioranza">
+                                           {rData.total} <span className="text-[8px] no-underline text-red-400 font-semibold italic">(scartata)</span>
+                                         </span>
+                                       ) : (
+                                         rData.total
+                                       )
                                      ) : (
-                                       rData.total
-                                     )
-                                   ) : (
-                                     <span className="text-slate-600">-</span>
-                                   )}
-                                 </td>
-                               );
-                             })}
-                             <td className="px-5 py-4 text-center font-black text-emerald-400 text-lg font-mono italic">
-                               {s.hits} {s.barrageHits > 0 && <span className="text-xs text-amber-500 font-normal"> (+{s.barrageHits}B)</span>}
-                             </td>
-                             <td className="px-5 py-4 text-center font-black text-sky-400 text-xs font-mono">{s.races}/{tournament.totalRaces}</td>
-                             <td className="px-5 py-4 text-right">
-                                {s.isEligible ? (
-                                  <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded text-[9px] font-black uppercase tracking-widest">In Regola</span>
-                                ) : (
-                                  <span className="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-[9px] font-black uppercase tracking-widest">Incompleto</span>
-                                )}
-                             </td>
-                           </tr>
-                         ))}
-                         {stats.length === 0 && (
-                           <tr key="empty-stats">
-                             <td colSpan={5 + tournamentSessions.length} className="px-5 py-12 text-center text-slate-600 text-[10px] font-black uppercase italic tracking-widest">Calcolo in attesa di iscrizioni nelle gare associate</td>
-                           </tr>
-                         )}
-                       </tbody>
-                    </table>
+                                       <span className="text-slate-600">-</span>
+                                     )}
+                                   </td>
+                                 );
+                               })}
+                               <td className="px-5 py-4 text-center font-black text-emerald-400 text-lg font-mono italic">
+                                 {s.hits} {s.barrageHits > 0 && <span className="text-xs text-amber-500 font-normal"> (+{s.barrageHits}B)</span>}
+                               </td>
+                               <td className="px-5 py-4 text-center font-black text-sky-400 text-xs font-mono">{s.races}/{tournament.totalRaces}</td>
+                               <td className="px-5 py-4 text-right">
+                                  {s.isEligible ? (
+                                    <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded text-[9px] font-black uppercase tracking-widest">In Regola</span>
+                                  ) : (
+                                    <span className="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-[9px] font-black uppercase tracking-widest">Incompleto</span>
+                                  )}
+                               </td>
+                             </tr>
+                           ))}
+                           {stats.length === 0 && (
+                             <tr key="empty-stats">
+                               <td colSpan={5 + tournamentSessions.length} className="px-5 py-12 text-center text-slate-600 text-[10px] font-black uppercase italic tracking-widest">Calcolo in attesa di iscrizioni nelle gare associate</td>
+                             </tr>
+                           )}
+                         </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+              )}
           </div>
         );
         })}
