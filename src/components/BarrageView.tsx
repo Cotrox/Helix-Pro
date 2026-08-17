@@ -24,6 +24,8 @@ export default function BarrageView({ shooters, registrations, scores, settings,
   const [bSeriesCount, setBSeriesCount] = useState(1);
   const [bTargetsPerSeries, setBTargetsPerSeries] = useState(1);
 
+  const isTournament = Boolean(tournamentStats);
+
   const rankedData = useMemo(() => {
     if (tournamentStats) {
       return tournamentStats.map(s => ({
@@ -37,8 +39,9 @@ export default function BarrageView({ shooters, registrations, scores, settings,
         const shooter = shooters.find(s => s.id === reg.shooterId);
         const score = scores.find(sc => sc.shooterId === reg.shooterId);
         const total = score ? (score.manualTotal !== null ? score.manualTotal : score.seriesScores.reduce((a: number, b) => (a ?? 0) + (b ?? 0), 0) ?? 0) : 0;
-        return { shooter, total, shooterId: reg.shooterId };
-      }).sort((a, b) => b.total - a.total);
+        const spareggio = score?.spareggioScore || 0;
+        return { shooter, total, spareggio, shooterId: reg.shooterId };
+      }).sort((a, b) => b.total !== a.total ? b.total - a.total : b.spareggio - a.spareggio);
     }
     return [];
   }, [tournamentStats, registrations, shooters, scores]);
@@ -52,7 +55,7 @@ export default function BarrageView({ shooters, registrations, scores, settings,
       });
     });
     setSelectedShooters(Array.from(selectedIds));
-    toast.success(`Selezionati primi ${nPerCategory} per categoria`);
+    toast.success(`Selezionati primi ${nPerCategory} per categoria (${isTournament ? 'Classifica Torneo' : 'Classifica Gara'})`);
   };
 
   const handleCreateBarrage = () => {
@@ -112,10 +115,23 @@ export default function BarrageView({ shooters, registrations, scores, settings,
     <div className="p-8 space-y-8 bg-brand-bg h-full overflow-y-auto high-density-scroll">
       <div className="flex justify-between items-center bg-card-bg p-8 rounded-2xl border border-slate-800 shadow-2xl">
         <div className="space-y-1">
-          <h2 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <Target className="text-amber-500" size={20} /> {title || 'Management Barrages'}
-          </h2>
-          <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-1 italic">Gestione mini-gare e finali post-competizione</p>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <Target className="text-amber-500" size={20} /> {title || (isTournament ? 'Management Barrages Torneo' : 'Management Barrages Gara')}
+            </h2>
+            <span className={`px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border ${
+              isTournament 
+                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
+                : 'bg-sky-500/10 text-sky-400 border-sky-500/30'
+            }`}>
+              {isTournament ? 'Area Barrage Torneo' : 'Area Barrage Singola Gara'}
+            </span>
+          </div>
+          <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-1 italic">
+            {isTournament 
+              ? 'Gestione sbarramenti e finali riservate esclusivamente al Torneo' 
+              : 'Gestione sbarramenti e finali riservate esclusivamente a questa singola gara'}
+          </p>
         </div>
         <button
           onClick={() => setIsAdding(true)}
@@ -219,7 +235,9 @@ export default function BarrageView({ shooters, registrations, scores, settings,
             </div>
 
             <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Partecipanti Selezionati ({selectedShooters.length})</label>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">
+                Partecipanti Selezionati ({selectedShooters.length}) • {isTournament ? 'Atleti Classifica Torneo' : 'Atleti Iscritti alla Gara'}
+              </label>
               <div className="max-h-64 overflow-y-auto bg-slate-900/80 rounded-xl border border-slate-800 p-2 high-density-scroll">
                 {rankedData.map(d => (
                   <label 
@@ -380,8 +398,14 @@ export default function BarrageView({ shooters, registrations, scores, settings,
         {barrages.length === 0 && !isAdding && (
           <div className="py-24 text-center border-2 border-dashed border-slate-800 rounded-3xl flex flex-col items-center justify-center opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all cursor-pointer group" onClick={() => setIsAdding(true)}>
              <Target className="text-slate-700 group-hover:text-amber-500 transition-colors mb-4" size={48} />
-             <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] group-hover:text-slate-400 transition-colors">Nessun barrage configurato</p>
-             <p className="text-[9px] text-slate-700 uppercase mt-2 font-bold italic tracking-wider">Le finali possono essere create in qualsiasi momento della gara</p>
+             <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] group-hover:text-slate-400 transition-colors">
+               Nessun barrage configurato per {isTournament ? 'questo torneo' : 'questa gara'}
+             </p>
+             <p className="text-[9px] text-slate-700 uppercase mt-2 font-bold italic tracking-wider">
+               {isTournament 
+                 ? 'Le finali di torneo possono essere create in qualsiasi momento durante lo svolgimento del torneo' 
+                 : 'Le finali di gara possono essere create in qualsiasi momento della competizione'}
+             </p>
           </div>
         )}
       </div>

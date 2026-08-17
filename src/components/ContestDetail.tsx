@@ -112,7 +112,7 @@ export default function ContestDetail({
     { id: 'registration', label: 'Iscrizioni', icon: UserPlus },
     { id: 'scoring', label: 'Punteggi', icon: Target },
     { id: 'rankings', label: 'Classifiche', icon: Trophy },
-    { id: 'barrages', label: 'Barrage', icon: Award },
+    { id: 'barrages', label: 'Barrage Gara', icon: Award },
     { id: 'prizes', label: 'Riepilogo Premi', icon: Landmark },
     { id: 'settings', label: 'Configurazione', icon: SettingsIcon },
   ];
@@ -667,6 +667,7 @@ export default function ContestDetail({
             settings={session.settings}
             barrages={session.barrages || []}
             onUpdateBarrages={newBarrages => onUpdateSession({ barrages: newBarrages })}
+            title={`Barrage Gara: ${session.settings.name}`}
           />
         )}
         {activeSubTab === 'prizes' && (
